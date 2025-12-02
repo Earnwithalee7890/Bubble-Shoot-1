@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 
+// TODO: Replace with actual owner address
+const OWNER_ADDRESS = "0xYourOwnerAddressHere";
+
 export async function POST(request: Request) {
     try {
         const { address } = await request.json();
@@ -29,6 +32,23 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Already checked in today', streak: user.streak }, { status: 400 });
         }
 
+        // Deduct from owner
+        const { data: owner, error: ownerError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('address', OWNER_ADDRESS)
+            .single();
+
+        if (ownerError) {
+            console.warn('Owner not found, skipping deduction');
+        } else {
+            const newOwnerPoints = (owner.points || 0) - 3;
+            await supabase
+                .from('users')
+                .update({ points: newOwnerPoints })
+                .eq('address', OWNER_ADDRESS);
+        }
+
         let streak = user?.streak || 0;
 
         // Check if streak is broken
@@ -43,7 +63,7 @@ export async function POST(request: Request) {
         }
 
         streak += 1;
-        const points = (user?.points || 0) + 10; // Example point increment
+        const points = (user?.points || 0) + 3; // Reward 3 DEGEN (points)
 
         // Update or insert user
         const { error: upsertError } = await supabase

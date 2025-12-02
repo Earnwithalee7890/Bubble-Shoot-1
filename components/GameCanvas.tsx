@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import Phaser from "phaser";
 
 interface GameCanvasProps {
@@ -12,6 +12,12 @@ interface GameCanvasProps {
 export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCanvasProps) {
     const gameRef = useRef<Phaser.Game | null>(null);
     const containerRef = useRef<HTMLDivElement>(null);
+    const onLevelCompleteRef = useRef(onLevelComplete);
+
+    // Update ref when callback changes, but don't recreate the game
+    useEffect(() => {
+        onLevelCompleteRef.current = onLevelComplete;
+    }, [onLevelComplete]);
 
     useEffect(() => {
         if (!containerRef.current) return;
@@ -22,6 +28,8 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
             private nextBubble: Phaser.GameObjects.Sprite | null = null;
             private bullet: Phaser.Physics.Arcade.Sprite | null = null;
             private arrow: Phaser.GameObjects.Graphics | null = null;
+            private bulletCleanupTimer: Phaser.Time.TimerEvent | null = null;
+            private isSnapping: boolean = false;
 
             private readonly BUBBLE_RADIUS = 20;
             private readonly GRID_ROWS = 12;
@@ -55,7 +63,8 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
 
             create() {
                 // Background
-                this.add.rectangle(400, 300, 800, 600, 0x1a1a2e);
+                const bg = this.add.rectangle(400, 300, 800, 600, 0x1a1a2e);
+                bg.setInteractive();
 
                 // Physics bounds
                 this.physics.world.setBounds(0, 0, 800, 600);
@@ -67,7 +76,10 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                 this.createShooter();
 
                 // Input
-                this.input.on('pointerdown', this.shoot, this);
+                this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+                    console.log('Pointer down:', pointer.x, pointer.y);
+                    this.shoot(pointer);
+                }, this);
                 this.input.on('pointermove', this.updateArrow, this);
 
                 // Score
@@ -77,30 +89,45 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                     fontFamily: 'Orbitron'
                 });
 
+                // Debug Text
+                this.add.text(10, 10, 'Click to Shoot!', { color: '#0f0' });
+
                 // Arrow
                 this.arrow = this.add.graphics();
             }
 
             update() {
-                if (this.bullet && this.bullet.active) {
+                if (this.bullet && this.bullet.active && !this.isSnapping) {
+                    // Safety check: if bullet has near-zero velocity, snap it
+                    const velocity = this.bullet.body!.velocity;
+                    if (Math.abs(velocity.x) < 10 && Math.abs(velocity.y) < 10) {
+                        console.warn('Bullet stuck with low velocity, forcing snap');
+                        this.snapBubble();
+                        return;
+                    }
+
                     // Check collision with walls
-                    if (this.bullet.x <= this.BUBBLE_RADIUS || this.bullet.x >= 800 - this.BUBBLE_RADIUS) {
-                        this.bullet.setVelocityX(-this.bullet.body!.velocity.x);
+                    if (this.bullet.x <= this.BUBBLE_RADIUS + 5) {
+                        // Hit left wall
+                        this.bullet.setAngularVelocity(500); // Spin clockwise
+                    } else if (this.bullet.x >= 800 - (this.BUBBLE_RADIUS + 5)) {
+                        // Hit right wall
+                        this.bullet.setAngularVelocity(-500); // Spin counter-clockwise
                     }
 
                     // Check collision with top
                     if (this.bullet.y <= this.BUBBLE_RADIUS) {
                         this.snapBubble();
+                        return;
                     }
 
                     // Check collision with other bubbles
-                    // Simple distance check for now (can be optimized with quadtree or grid lookup)
                     for (let r = 0; r < this.GRID_ROWS; r++) {
                         for (let c = 0; c < this.bubbles[r].length; c++) {
                             const bubble = this.bubbles[r][c];
                             if (bubble && bubble.visible) {
                                 const dist = Phaser.Math.Distance.Between(this.bullet.x, this.bullet.y, bubble.x, bubble.y);
-                                if (dist < this.BUBBLE_RADIUS * 2 - 5) { // -5 for some overlap forgiveness
+                                if (dist < this.BUBBLE_RADIUS * 2 - 5) {
                                     this.snapBubble();
                                     return;
                                 }
@@ -111,10 +138,7 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
             }
 
             private createGrid() {
-                // Clear existing
                 this.bubbles = Array(this.GRID_ROWS).fill(null).map(() => Array(this.GRID_COLS).fill(null));
-
-                // Fill top rows based on level
                 const rowsToFill = Math.min(3 + Math.floor(level / 2), this.GRID_ROWS - 4);
 
                 for (let r = 0; r < rowsToFill; r++) {
@@ -124,7 +148,7 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                     for (let c = 0; c < cols; c++) {
                         const colorIdx = Phaser.Math.Between(0, this.COLORS.length - 1);
                         const x = offsetX + c * (this.BUBBLE_RADIUS * 2) + (800 - (this.GRID_COLS * this.BUBBLE_RADIUS * 2)) / 2;
-                        const y = this.BUBBLE_RADIUS + r * (this.BUBBLE_RADIUS * 1.732); // Hex height
+                        const y = this.BUBBLE_RADIUS + r * (this.BUBBLE_RADIUS * 1.732);
 
                         const bubble = this.add.sprite(x, y, `bubble_${colorIdx}`);
                         bubble.setData('color', colorIdx);
@@ -137,12 +161,10 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                 const centerX = 400;
                 const bottomY = 550;
 
-                // Current bubble to shoot
                 const colorIdx = Phaser.Math.Between(0, this.COLORS.length - 1);
                 this.shooter = this.add.sprite(centerX, bottomY, `bubble_${colorIdx}`);
                 this.shooter.setData('color', colorIdx);
 
-                // Next bubble preview
                 const nextColorIdx = Phaser.Math.Between(0, this.COLORS.length - 1);
                 this.nextBubble = this.add.sprite(centerX + 100, bottomY, `bubble_${nextColorIdx}`);
                 this.nextBubble.setData('color', nextColorIdx);
@@ -152,11 +174,8 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
 
             private updateArrow(pointer: Phaser.Input.Pointer) {
                 if (this.isShooting || !this.shooter || !this.arrow) return;
-
                 const angle = Phaser.Math.Angle.Between(this.shooter.x, this.shooter.y, pointer.x, pointer.y);
-
-                // Limit angle to avoid shooting too flat
-                if (angle > -0.2 || angle < -2.9) return;
+                if (angle > 0.1) return; // Only draw arrow when shooting upward
 
                 this.arrow.clear();
                 this.arrow.lineStyle(2, 0xffffff, 0.5);
@@ -170,35 +189,64 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                 if (this.isShooting || !this.shooter) return;
 
                 const angle = Phaser.Math.Angle.Between(this.shooter.x, this.shooter.y, pointer.x, pointer.y);
-                if (angle > -0.2 || angle < -2.9) return; // Constraint shooting angle
 
+                // Only allow shooting upward
+                if (angle > 0.1) {
+                    console.log('Cannot shoot downward');
+                    return;
+                }
+
+                console.log('Shooting! Angle:', angle);
                 this.isShooting = true;
 
-                // Create physics body for the bullet
                 this.bullet = this.physics.add.sprite(this.shooter.x, this.shooter.y, this.shooter.texture.key);
                 this.bullet.setData('color', this.shooter.getData('color'));
                 this.bullet.setCollideWorldBounds(true);
                 this.bullet.setBounce(1);
 
-                // Calculate velocity
                 const speed = 800;
                 this.bullet.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
 
-                // Hide shooter bubble temporarily
                 this.shooter.setVisible(false);
                 if (this.arrow) this.arrow.clear();
+
+                // Safety timeout: Clean up bullet after 10 seconds if it hasn't snapped
+                if (this.bulletCleanupTimer) {
+                    this.bulletCleanupTimer.destroy();
+                }
+                this.bulletCleanupTimer = this.time.delayedCall(10000, () => {
+                    console.warn('Bullet cleanup timeout triggered');
+                    this.cleanupBullet();
+                    this.resetShooter();
+                });
+            }
+
+            private cleanupBullet() {
+                if (this.bullet) {
+                    this.bullet.destroy();
+                    this.bullet = null;
+                }
+                if (this.bulletCleanupTimer) {
+                    this.bulletCleanupTimer.destroy();
+                    this.bulletCleanupTimer = null;
+                }
             }
 
             private snapBubble() {
-                if (!this.bullet) return;
+                if (!this.bullet || this.isSnapping) return;
+                this.isSnapping = true;
+
+                // Cancel the cleanup timer since we're handling it here
+                if (this.bulletCleanupTimer) {
+                    this.bulletCleanupTimer.destroy();
+                    this.bulletCleanupTimer = null;
+                }
 
                 this.bullet.setVelocity(0, 0);
                 const x = this.bullet.x;
                 const y = this.bullet.y;
                 const color = this.bullet.getData('color');
 
-                // Find nearest grid position
-                // This is a simplified grid mapping
                 const gridWidth = (800 - (this.GRID_COLS * this.BUBBLE_RADIUS * 2)) / 2;
                 const rowHeight = this.BUBBLE_RADIUS * 1.732;
 
@@ -215,14 +263,24 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                 if (c < 0) c = 0;
                 if (c >= maxCols) c = maxCols - 1;
 
-                // If spot is taken, try to find nearest open spot (simple BFS or check neighbors could go here)
-                // For this prototype, we just overwrite or stop if taken (improved logic needed for real game)
+                // Check if position is already occupied, find nearest empty spot
                 if (this.bubbles[r][c]) {
-                    // Very basic collision resolution: just place it where it is roughly
-                    // In a real game, you'd calculate the exact neighbor position based on impact angle
+                    let found = false;
+                    // Try to find an empty adjacent spot
+                    for (let dr = -1; dr <= 1 && !found; dr++) {
+                        for (let dc = -1; dc <= 1 && !found; dc++) {
+                            const nr = r + dr;
+                            const nc = c + dc;
+                            const nMaxCols = nr % 2 === 0 ? this.GRID_COLS : this.GRID_COLS - 1;
+                            if (nr >= 0 && nr < this.GRID_ROWS && nc >= 0 && nc < nMaxCols && !this.bubbles[nr][nc]) {
+                                r = nr;
+                                c = nc;
+                                found = true;
+                            }
+                        }
+                    }
                 }
 
-                // Place bubble
                 const finalX = gridWidth + offsetX + c * (this.BUBBLE_RADIUS * 2);
                 const finalY = this.BUBBLE_RADIUS + r * rowHeight;
 
@@ -230,14 +288,10 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                 newBubble.setData('color', color);
                 this.bubbles[r][c] = newBubble;
 
-                // Destroy bullet
-                this.bullet.destroy();
-                this.bullet = null;
+                this.cleanupBullet();
+                this.isSnapping = false;
 
-                // Check matches
                 this.checkMatches(r, c, color);
-
-                // Reset shooter
                 this.resetShooter();
             }
 
@@ -267,33 +321,26 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                 }
 
                 if (matches.length >= 3) {
-                    // Pop bubbles
                     matches.forEach(m => {
                         const bubble = this.bubbles[m.r][m.c];
                         if (bubble) {
-                            // Animation
                             this.tweens.add({
                                 targets: bubble,
                                 scale: 0,
                                 duration: 200,
-                                onComplete: () => {
-                                    bubble.destroy();
-                                }
+                                onComplete: () => bubble.destroy()
                             });
                             this.bubbles[m.r][m.c] = null;
                         }
                     });
 
-                    // Update score
                     this.score += matches.length * 10;
                     if (this.scoreText) this.scoreText.setText(`Score: ${this.score}`);
 
-                    // Check for floating bubbles (orphans)
                     this.removeOrphans();
 
-                    // Check win condition
                     if (this.isLevelClear()) {
-                        onLevelComplete(this.score);
+                        onLevelCompleteRef.current(this.score);
                     }
                 }
             }
@@ -301,11 +348,6 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
             private getNeighbors(r: number, c: number) {
                 const neighbors: { r: number, c: number }[] = [];
                 const isEven = r % 2 === 0;
-
-                // Directions: [dr, dc]
-                // For even rows: TL(-1, -1), TR(-1, 0), L(0, -1), R(0, 1), BL(1, -1), BR(1, 0)
-                // For odd rows: TL(-1, 0), TR(-1, 1), L(0, -1), R(0, 1), BL(1, 0), BR(1, 1)
-
                 const offsets = isEven ?
                     [[-1, -1], [-1, 0], [0, -1], [0, 1], [1, -1], [1, 0]] :
                     [[-1, 0], [-1, 1], [0, -1], [0, 1], [1, 0], [1, 1]];
@@ -321,16 +363,13 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                         }
                     }
                 }
-
                 return neighbors;
             }
 
             private removeOrphans() {
-                // BFS from top row to find all connected bubbles
                 const connected = new Set<string>();
                 const queue: { r: number, c: number }[] = [];
 
-                // Add all bubbles in top row
                 for (let c = 0; c < this.GRID_COLS; c++) {
                     if (this.bubbles[0][c]) {
                         queue.push({ r: 0, c });
@@ -351,23 +390,21 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                     }
                 }
 
-                // Remove any bubble not in connected set
                 for (let r = 0; r < this.GRID_ROWS; r++) {
                     for (let c = 0; c < this.bubbles[r].length; c++) {
                         if (this.bubbles[r][c] && !connected.has(`${r},${c}`)) {
                             const bubble = this.bubbles[r][c];
-                            // Drop animation
-                            this.tweens.add({
-                                targets: bubble,
-                                y: 600,
-                                alpha: 0,
-                                duration: 500,
-                                onComplete: () => {
-                                    bubble.destroy();
-                                }
-                            });
-                            this.bubbles[r][c] = null;
-                            this.score += 20; // Bonus for dropping
+                            if (bubble) {
+                                this.tweens.add({
+                                    targets: bubble,
+                                    y: 600,
+                                    alpha: 0,
+                                    duration: 500,
+                                    onComplete: () => bubble.destroy()
+                                });
+                                this.bubbles[r][c] = null;
+                                this.score += 20;
+                            }
                         }
                     }
                 }
@@ -384,15 +421,20 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
             }
 
             private resetShooter() {
-                if (!this.shooter || !this.nextBubble) return;
+                if (!this.shooter || !this.nextBubble) {
+                    console.warn('Cannot reset shooter - components missing');
+                    this.isShooting = false;
+                    return;
+                }
 
-                // Move next bubble to shooter position
+                // Ensure no bullet is active
+                this.cleanupBullet();
+
                 const nextColor = this.nextBubble.getData('color');
                 this.shooter.setTexture(`bubble_${nextColor}`);
                 this.shooter.setData('color', nextColor);
                 this.shooter.setVisible(true);
 
-                // Generate new next bubble
                 const newColor = Phaser.Math.Between(0, this.COLORS.length - 1);
                 this.nextBubble.setTexture(`bubble_${newColor}`);
                 this.nextBubble.setData('color', newColor);
@@ -401,7 +443,6 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
             }
         }
 
-        // Game configuration
         const config: Phaser.Types.Core.GameConfig = {
             type: Phaser.AUTO,
             parent: containerRef.current,
@@ -418,19 +459,16 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
             scene: GameScene,
         };
 
-        // Initialize game
         gameRef.current = new Phaser.Game(config);
 
-        // Cleanup
         return () => {
             if (gameRef.current) {
                 gameRef.current.destroy(true);
                 gameRef.current = null;
             }
         };
-    }, [level, onLevelComplete]);
+    }, [level]); // Removed onLevelComplete from dependencies to prevent game recreation
 
-    // Handle pause
     useEffect(() => {
         if (gameRef.current) {
             const scene = gameRef.current.scene.getScene('GameScene');
@@ -451,6 +489,13 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                 className="rounded-2xl overflow-hidden shadow-2xl border-4 border-blue-400/50"
                 style={{ width: '800px', height: '600px' }}
             />
+            {isPaused && (
+                <div className="absolute inset-0 bg-black/70 backdrop-blur-sm rounded-2xl flex items-center justify-center">
+                    <div className="text-6xl font-orbitron font-bold text-white animate-pulse">
+                        ⏸ PAUSED
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

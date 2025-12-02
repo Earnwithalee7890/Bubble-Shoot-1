@@ -38,7 +38,7 @@ export default function Home() {
                         BUBBLE SHOT
                     </h2>
                     <p className="text-xl md:text-2xl text-blue-200 font-inter">
-                        Crypto Bubble Shooter • 1,000 Levels • Earn DEGEN Rewards
+                        Crypto Bubble Shooter • Earn DEGEN Rewards
                     </p>
                 </div>
 
@@ -52,7 +52,7 @@ export default function Home() {
 
                     <Link href="/levels">
                         <button className="w-full bg-gradient-to-r from-purple-500/20 to-blue-500/20 hover:from-purple-500/30 hover:to-blue-500/30 border-2 border-purple-400/50 text-purple-200 font-orbitron font-bold py-4 px-8 rounded-xl text-xl transition-all duration-300 transform hover:scale-105 backdrop-blur-sm">
-                            📊 LEVELS (1-1000)
+                            📊 LEVELS
                         </button>
                     </Link>
 
