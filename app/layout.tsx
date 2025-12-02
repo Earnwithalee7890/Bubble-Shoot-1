@@ -24,6 +24,8 @@ export const metadata: Metadata = {
     },
 };
 
+import FarcasterProvider from "@/components/FarcasterProvider";
+
 export default function RootLayout({
     children,
 }: Readonly<{
@@ -32,9 +34,11 @@ export default function RootLayout({
     return (
         <html lang="en">
             <body className={`${inter.variable} ${orbitron.variable} antialiased`}>
-                <Web3Provider>
-                    {children}
-                </Web3Provider>
+                <FarcasterProvider>
+                    <Web3Provider>
+                        {children}
+                    </Web3Provider>
+                </FarcasterProvider>
             </body>
         </html>
     );

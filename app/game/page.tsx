@@ -21,6 +21,8 @@ export default function GamePage() {
 
     // Load saved progress
     useEffect(() => {
+        if (typeof window === 'undefined') return;
+
         const savedLevel = localStorage.getItem('currentLevel');
         if (savedLevel) {
             setCurrentLevel(parseInt(savedLevel));
@@ -66,7 +68,9 @@ export default function GamePage() {
         setScore(prevScore => prevScore + levelScore);
         setCurrentLevel(prevLevel => {
             const nextLevel = prevLevel + 1;
-            localStorage.setItem('currentLevel', nextLevel.toString());
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('currentLevel', nextLevel.toString());
+            }
             return nextLevel;
         });
     }, []); // Empty deps since we use functional updates

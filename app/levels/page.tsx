@@ -9,6 +9,8 @@ export default function LevelsPage() {
     const [completedLevels, setCompletedLevels] = useState<Set<number>>(new Set());
 
     useEffect(() => {
+        if (typeof window === 'undefined') return;
+
         const savedLevel = localStorage.getItem('currentLevel');
         if (savedLevel) {
             setCurrentLevel(parseInt(savedLevel));
@@ -23,7 +25,9 @@ export default function LevelsPage() {
 
     const playLevel = (level: number) => {
         if (level <= currentLevel) {
-            localStorage.setItem('selectedLevel', level.toString());
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('selectedLevel', level.toString());
+            }
             router.push('/game');
         }
     };

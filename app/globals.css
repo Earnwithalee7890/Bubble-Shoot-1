@@ -11,16 +11,6 @@
   --neon-blue: #00D4FF;
   --neon-purple: #B026FF;
   --neon-pink: #FF006E;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background:
-    radial-gradient(circle at 20% 50%, rgba(0, 82, 255, 0.1) 0%, transparent 50%),
-    radial-gradient(circle at 80% 50%, rgba(176, 38, 255, 0.1) 0%, transparent 50%);
-  pointer-events: none;
-  z-index: 0;
 }
 
 .cyber-grid {
