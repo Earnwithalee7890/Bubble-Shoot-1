@@ -448,6 +448,10 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
             parent: containerRef.current,
             width: 800,
             height: 600,
+            scale: {
+                mode: Phaser.Scale.FIT,
+                autoCenter: Phaser.Scale.CENTER_BOTH,
+            },
             backgroundColor: '#1a1a2e',
             physics: {
                 default: 'arcade',
@@ -486,8 +490,7 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
         <div className="relative">
             <div
                 ref={containerRef}
-                className="rounded-2xl overflow-hidden shadow-2xl border-4 border-blue-400/50"
-                style={{ width: '800px', height: '600px' }}
+                className="rounded-2xl overflow-hidden shadow-2xl border-4 border-blue-400/50 w-full max-w-[800px] aspect-[4/3]"
             />
             {isPaused && (
                 <div className="absolute inset-0 bg-black/70 backdrop-blur-sm rounded-2xl flex items-center justify-center">

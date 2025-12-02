@@ -44,16 +44,18 @@ export default function Home() {
 
                 {/* Main menu buttons */}
                 <div className="flex flex-col gap-4 w-full max-w-md mb-8">
-                    <Link href="/game">
-                        <button className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-orbitron font-bold py-4 px-8 rounded-xl text-xl transition-all duration-300 transform hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/50">
-                            🎮 PLAY NOW
-                        </button>
+                    <Link
+                        href="/game"
+                        className="block w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-orbitron font-bold py-4 px-8 rounded-xl text-xl transition-all duration-300 transform hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/50 text-center"
+                    >
+                        🎮 PLAY NOW
                     </Link>
 
-                    <Link href="/levels">
-                        <button className="w-full bg-gradient-to-r from-purple-500/20 to-blue-500/20 hover:from-purple-500/30 hover:to-blue-500/30 border-2 border-purple-400/50 text-purple-200 font-orbitron font-bold py-4 px-8 rounded-xl text-xl transition-all duration-300 transform hover:scale-105 backdrop-blur-sm">
-                            📊 LEVELS
-                        </button>
+                    <Link
+                        href="/levels"
+                        className="block w-full bg-gradient-to-r from-purple-500/20 to-blue-500/20 hover:from-purple-500/30 hover:to-blue-500/30 border-2 border-purple-400/50 text-purple-200 font-orbitron font-bold py-4 px-8 rounded-xl text-xl transition-all duration-300 transform hover:scale-105 backdrop-blur-sm text-center"
+                    >
+                        📊 LEVELS
                     </Link>
 
                     <button
@@ -64,10 +66,11 @@ export default function Home() {
                         💰 WALLET & REWARDS
                     </button>
 
-                    <Link href="/leaderboard">
-                        <button className="w-full bg-gradient-to-r from-purple-500/20 to-blue-500/20 hover:from-purple-500/30 hover:to-blue-500/30 border-2 border-purple-400/50 text-purple-200 font-orbitron font-bold py-4 px-8 rounded-xl text-xl transition-all duration-300 transform hover:scale-105 backdrop-blur-sm">
-                            🏆 LEADERBOARD
-                        </button>
+                    <Link
+                        href="/leaderboard"
+                        className="block w-full bg-gradient-to-r from-purple-500/20 to-blue-500/20 hover:from-purple-500/30 hover:to-blue-500/30 border-2 border-purple-400/50 text-purple-200 font-orbitron font-bold py-4 px-8 rounded-xl text-xl transition-all duration-300 transform hover:scale-105 backdrop-blur-sm text-center"
+                    >
+                        🏆 LEADERBOARD
                     </Link>
                 </div>
 
