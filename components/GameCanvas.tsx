@@ -50,12 +50,22 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
 
                 this.COLORS.forEach((color, index) => {
                     graphics.clear();
+
+                    // Main body with gradient effect (simulated with alpha)
                     graphics.fillStyle(color, 1);
                     graphics.fillCircle(this.BUBBLE_RADIUS, this.BUBBLE_RADIUS, this.BUBBLE_RADIUS);
 
-                    // Add a shine effect
+                    // Darker bottom shading for 3D effect
+                    graphics.fillStyle(0x000000, 0.2);
+                    graphics.fillCircle(this.BUBBLE_RADIUS, this.BUBBLE_RADIUS + 2, this.BUBBLE_RADIUS - 2);
+
+                    // Main shine (top left)
+                    graphics.fillStyle(0xffffff, 0.6);
+                    graphics.fillCircle(this.BUBBLE_RADIUS - 6, this.BUBBLE_RADIUS - 6, 6);
+
+                    // Secondary shine (smaller)
                     graphics.fillStyle(0xffffff, 0.4);
-                    graphics.fillCircle(this.BUBBLE_RADIUS - 5, this.BUBBLE_RADIUS - 5, 5);
+                    graphics.fillCircle(this.BUBBLE_RADIUS - 9, this.BUBBLE_RADIUS - 9, 2);
 
                     graphics.generateTexture(`bubble_${index}`, this.BUBBLE_RADIUS * 2, this.BUBBLE_RADIUS * 2);
                 });
@@ -207,6 +217,17 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                 const speed = 800;
                 this.bullet.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
 
+                // Add trail effect
+                const trail = this.add.particles(0, 0, `bubble_${this.shooter.getData('color')}`, {
+                    follow: this.bullet,
+                    scale: { start: 0.4, end: 0 },
+                    alpha: { start: 0.5, end: 0 },
+                    lifespan: 200,
+                    frequency: 20,
+                    blendMode: 'ADD'
+                });
+                this.bullet.setData('trail', trail);
+
                 this.shooter.setVisible(false);
                 if (this.arrow) this.arrow.clear();
 
@@ -223,6 +244,8 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
 
             private cleanupBullet() {
                 if (this.bullet) {
+                    const trail = this.bullet.getData('trail');
+                    if (trail) trail.destroy();
                     this.bullet.destroy();
                     this.bullet = null;
                 }
@@ -328,7 +351,23 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                                 targets: bubble,
                                 scale: 0,
                                 duration: 200,
-                                onComplete: () => bubble.destroy()
+                                onComplete: () => {
+                                    // Particle explosion effect
+                                    const particles = this.add.particles(0, 0, `bubble_${bubble.getData('color')}`, {
+                                        x: bubble.x,
+                                        y: bubble.y,
+                                        speed: { min: 50, max: 150 },
+                                        scale: { start: 0.4, end: 0 },
+                                        lifespan: 400,
+                                        quantity: 8,
+                                        blendMode: 'ADD'
+                                    });
+
+                                    // Auto destroy particles after animation
+                                    this.time.delayedCall(400, () => particles.destroy());
+
+                                    bubble.destroy();
+                                }
                             });
                             this.bubbles[m.r][m.c] = null;
                         }
@@ -451,6 +490,8 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
             scale: {
                 mode: Phaser.Scale.FIT,
                 autoCenter: Phaser.Scale.CENTER_BOTH,
+                width: 800,
+                height: 600,
             },
             backgroundColor: '#1a1a2e',
             physics: {
@@ -487,7 +528,7 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
     }, [isPaused]);
 
     return (
-        <div className="relative">
+        <div className="relative w-full flex justify-center">
             <div
                 ref={containerRef}
                 className="rounded-2xl overflow-hidden shadow-2xl border-4 border-blue-400/50 w-full max-w-[800px] aspect-[4/3]"

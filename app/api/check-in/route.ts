@@ -27,9 +27,14 @@ export async function POST(request: Request) {
         const now = new Date();
         const lastCheckIn = user?.last_check_in ? new Date(user.last_check_in) : null;
 
-        // Check if already checked in today
-        if (lastCheckIn && lastCheckIn.toDateString() === now.toDateString()) {
-            return NextResponse.json({ error: 'Already checked in today', streak: user.streak }, { status: 400 });
+        // Check if already checked in today (use UTC to avoid timezone issues)
+        if (lastCheckIn) {
+            const nowUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+            const lastCheckInUTC = new Date(Date.UTC(lastCheckIn.getUTCFullYear(), lastCheckIn.getUTCMonth(), lastCheckIn.getUTCDate()));
+
+            if (nowUTC.getTime() === lastCheckInUTC.getTime()) {
+                return NextResponse.json({ error: 'Already checked in today', streak: user.streak }, { status: 400 });
+            }
         }
 
         // Deduct from owner
@@ -117,7 +122,11 @@ export async function GET(request: Request) {
 
     const now = new Date();
     const lastCheckIn = new Date(user.last_check_in);
-    const canCheckIn = lastCheckIn.toDateString() !== now.toDateString();
+
+    // Use UTC to avoid timezone issues
+    const nowUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const lastCheckInUTC = new Date(Date.UTC(lastCheckIn.getUTCFullYear(), lastCheckIn.getUTCMonth(), lastCheckIn.getUTCDate()));
+    const canCheckIn = nowUTC.getTime() !== lastCheckInUTC.getTime();
 
     return NextResponse.json({
         canCheckIn,
