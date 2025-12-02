@@ -7,7 +7,10 @@ import DailyCheckIn from "@/components/DailyCheckIn";
 import WalletModal from "@/components/WalletModal";
 import Link from "next/link";
 
+import { useRouter } from "next/navigation";
+
 export default function Home() {
+    const router = useRouter();
     const { address, isConnected } = useAccount();
     const [showWalletModal, setShowWalletModal] = useState(false);
 
@@ -44,12 +47,15 @@ export default function Home() {
 
                 {/* Main menu buttons */}
                 <div className="flex flex-col gap-4 w-full max-w-md mb-8">
-                    <Link
-                        href="/game"
-                        className="block w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-orbitron font-bold py-4 px-8 rounded-xl text-xl transition-all duration-300 transform hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/50 text-center"
+                    <button
+                        onClick={() => {
+                            console.log("Play button clicked");
+                            router.push("/game");
+                        }}
+                        className="block w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-orbitron font-bold py-4 px-8 rounded-xl text-xl transition-all duration-300 transform hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/50 text-center relative z-50 cursor-pointer"
                     >
                         🎮 PLAY NOW
-                    </Link>
+                    </button>
 
                     <Link
                         href="/levels"
