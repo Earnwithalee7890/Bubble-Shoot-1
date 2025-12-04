@@ -1,5 +1,4 @@
 "use client";
-"use client";
 
 import { useEffect, useState, createContext, useContext } from "react";
 
@@ -34,15 +33,44 @@ export default function FarcasterProvider({ children }: { children: React.ReactN
                     setUser(context.user);
                     console.log("Farcaster user found:", context.user);
 
-                    // Try to get the first verified address (usually ETH/Base)
-                    // If not available, fall back to custody address if it's an ETH address
-                    // Note: The SDK types might need checking, but usually it's verifiedAddresses
+                    // Debug: Log all keys to see structure
+                    console.log("Context keys:", Object.keys(context));
+                    console.log("User keys:", Object.keys(context.user));
+
+                    let addr: string | null = null;
+
+                    // Check for verifiedAddresses (camelCase)
                     const verified = (context.user as any).verifiedAddresses as string[];
                     if (verified && verified.length > 0) {
-                        setFarcasterAddress(verified[0]);
-                    } else if ((context.user as any).custodyAddress) {
-                        setFarcasterAddress((context.user as any).custodyAddress);
+                        addr = verified[0];
                     }
+
+                    // Check for verified_addresses (snake_case)
+                    if (!addr) {
+                        const verifiedSnake = (context.user as any).verified_addresses as string[];
+                        if (verifiedSnake && verifiedSnake.length > 0) {
+                            addr = verifiedSnake[0];
+                        }
+                    }
+
+                    // Check for custodyAddress (camelCase)
+                    if (!addr && (context.user as any).custodyAddress) {
+                        addr = (context.user as any).custodyAddress;
+                    }
+
+                    // Check for custody_address (snake_case)
+                    if (!addr && (context.user as any).custody_address) {
+                        addr = (context.user as any).custody_address;
+                    }
+
+                    if (addr) {
+                        console.log("Found Farcaster address:", addr);
+                        setFarcasterAddress(addr);
+                    } else {
+                        console.warn("No address found in Farcaster context");
+                    }
+                } else {
+                    console.log("No Farcaster user in context");
                 }
 
                 await sdk.default.actions.ready();
