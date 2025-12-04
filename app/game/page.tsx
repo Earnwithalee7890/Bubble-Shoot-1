@@ -7,7 +7,7 @@ import dynamic from 'next/dynamic';
 
 const GameCanvas = dynamic(() => import('@/components/GameCanvas'), {
     ssr: false,
-    loading: () => <div className="w-full h-[600px] bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400 font-orbitron">Loading Game Engine...</div>
+    loading: () => <div className="w-full h-full bg-slate-900 flex items-center justify-center text-slate-400 font-orbitron">Loading...</div>
 });
 
 export default function GamePage() {
@@ -16,48 +16,34 @@ export default function GamePage() {
     const [currentLevel, setCurrentLevel] = useState(1);
     const [score, setScore] = useState(0);
     const [isPaused, setIsPaused] = useState(false);
-    const [timeLeft, setTimeLeft] = useState(180); // base 3 minutes
+    const [timeLeft, setTimeLeft] = useState(180);
     const [isGameOver, setIsGameOver] = useState(false);
 
-    // Load saved progress
     useEffect(() => {
         if (typeof window === 'undefined') return;
-
         const savedLevel = localStorage.getItem('currentLevel');
-        if (savedLevel) {
-            setCurrentLevel(parseInt(savedLevel));
-        }
+        if (savedLevel) setCurrentLevel(parseInt(savedLevel));
     }, []);
 
-    // Adjust timer based on level (harder after level 2)
     useEffect(() => {
-        // Set initial time based on level
-        const baseTime = 180; // 3 minutes for levels 1-2
-        // For level 3+, reduce time by 10 seconds per level, minimum 60 seconds
+        const baseTime = 180;
         const adjusted = currentLevel > 2 ? Math.max(60, baseTime - (currentLevel - 2) * 10) : baseTime;
         setTimeLeft(adjusted);
         setIsGameOver(false);
         setIsPaused(false);
     }, [currentLevel]);
 
-    // Timer countdown
     useEffect(() => {
         if (isPaused || isGameOver) return;
-
         if (timeLeft <= 0) {
             setIsGameOver(true);
             setIsPaused(true);
             return;
         }
-
-        const timerId = setInterval(() => {
-            setTimeLeft(prev => prev - 1);
-        }, 1000);
-
+        const timerId = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
         return () => clearInterval(timerId);
     }, [isPaused, timeLeft, isGameOver]);
 
-    // Format time as MM:SS
     const formatTime = (seconds: number) => {
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
@@ -68,90 +54,70 @@ export default function GamePage() {
         setScore(prevScore => prevScore + levelScore);
         setCurrentLevel(prevLevel => {
             const nextLevel = prevLevel + 1;
-            if (typeof window !== 'undefined') {
-                localStorage.setItem('currentLevel', nextLevel.toString());
-            }
+            if (typeof window !== 'undefined') localStorage.setItem('currentLevel', nextLevel.toString());
             return nextLevel;
         });
-    }, []); // Empty deps since we use functional updates
+    }, []);
 
     return (
-        <div className="min-h-screen bg-slate-50 relative overflow-hidden cyber-grid flex flex-col">
-            {/* HUD */}
-            <div className="relative z-10 p-4 flex flex-col md:flex-row items-center justify-between gap-4">
-                <div className="flex w-full md:w-auto justify-between items-center gap-4">
-                    <button
-                        onClick={() => router.push('/')}
-                        className="btn-secondary px-4 py-2 text-sm flex items-center gap-2 click-scale"
-                    >
-                        ← Back
-                    </button>
-
-                    <button
-                        onClick={() => {
-                            console.log('Pause button clicked! Current state:', isPaused);
-                            setIsPaused(!isPaused);
-                        }}
-                        className="btn-secondary px-4 py-2 text-sm md:hidden click-scale"
-                    >
-                        {isPaused ? '▶' : '⏸'}
-                    </button>
+        <div className="h-screen bg-slate-900 relative overflow-hidden flex flex-col">
+            {/* Top HUD */}
+            <div className="bg-slate-800/80 backdrop-blur-md p-3 flex justify-between items-center z-20 shadow-lg border-b border-slate-700">
+                <div className="flex flex-col items-center w-1/3">
+                    <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Level</span>
+                    <span className="text-white font-orbitron font-bold text-xl">{currentLevel}</span>
                 </div>
-
-                <div className="grid grid-cols-3 gap-2 w-full md:w-auto">
-                    <div className="bg-white/80 border border-slate-200 rounded-xl px-4 py-2 backdrop-blur-sm text-center shadow-sm">
-                        <div className="text-slate-400 text-xs font-bold uppercase">Level</div>
-                        <div className="text-slate-800 font-orbitron font-bold text-lg leading-none">{currentLevel}</div>
-                    </div>
-
-                    <div className={`bg-white/80 border ${timeLeft < 30 ? 'border-red-400 animate-pulse' : 'border-slate-200'} rounded-xl px-4 py-2 backdrop-blur-sm text-center shadow-sm transition-colors`}>
-                        <div className={`${timeLeft < 30 ? 'text-red-400' : 'text-slate-400'} text-xs font-bold uppercase`}>Time</div>
-                        <div className={`${timeLeft < 30 ? 'text-red-500' : 'text-slate-800'} font-orbitron font-bold text-lg leading-none`}>{formatTime(timeLeft)}</div>
-                    </div>
-
-                    <div className="bg-white/80 border border-slate-200 rounded-xl px-4 py-2 backdrop-blur-sm text-center shadow-sm">
-                        <div className="text-slate-400 text-xs font-bold uppercase">Score</div>
-                        <div className="text-slate-800 font-orbitron font-bold text-lg leading-none">{score}</div>
-                    </div>
+                <div className="flex flex-col items-center w-1/3 border-x border-slate-700">
+                    <span className={`text-[10px] font-bold uppercase tracking-wider ${timeLeft < 30 ? 'text-red-400' : 'text-slate-400'}`}>Time</span>
+                    <span className={`font-orbitron font-bold text-xl ${timeLeft < 30 ? 'text-red-500 animate-pulse' : 'text-white'}`}>{formatTime(timeLeft)}</span>
                 </div>
+                <div className="flex flex-col items-center w-1/3">
+                    <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Score</span>
+                    <span className="text-white font-orbitron font-bold text-xl">{score}</span>
+                </div>
+            </div>
+
+            {/* Game Area */}
+            <div className="flex-1 relative w-full h-full bg-slate-900 flex items-center justify-center overflow-hidden">
+                <GameCanvas
+                    level={currentLevel}
+                    onLevelComplete={handleLevelComplete}
+                    isPaused={isPaused}
+                />
+            </div>
+
+            {/* Bottom Footer Controls */}
+            <div className="bg-slate-800/90 backdrop-blur-md p-4 flex justify-between items-center z-20 border-t border-slate-700 pb-8">
+                <button
+                    onClick={() => router.push('/')}
+                    className="flex items-center gap-2 px-6 py-3 bg-slate-700 hover:bg-slate-600 rounded-xl text-white font-bold transition-all active:scale-95"
+                >
+                    <span>←</span> Back
+                </button>
 
                 <button
-                    onClick={() => {
-                        console.log('Pause button clicked! Current state:', isPaused);
-                        setIsPaused(!isPaused);
-                    }}
-                    className="hidden md:block btn-secondary px-6 py-2 click-scale"
+                    onClick={() => setIsPaused(!isPaused)}
+                    className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 rounded-xl text-white font-bold transition-all active:scale-95 shadow-lg shadow-blue-600/20"
                 >
                     {isPaused ? '▶ Resume' : '⏸ Pause'}
                 </button>
             </div>
 
-            {/* Game Canvas */}
-            <div className="flex-1 relative z-10 flex items-center justify-center p-4" style={{ pointerEvents: isPaused ? 'none' : 'auto' }}>
-                <div className="w-full max-w-4xl h-full flex items-center justify-center rounded-2xl overflow-hidden shadow-2xl border-4 border-white/50">
-                    <GameCanvas
-                        level={currentLevel}
-                        onLevelComplete={handleLevelComplete}
-                        isPaused={isPaused}
-                    />
-                </div>
-            </div>
-
-            {/* Game Over / Pause Menu */}
+            {/* Pause/Game Over Modal */}
             {(isPaused || isGameOver) && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm" style={{ pointerEvents: 'auto' }}>
-                    <div className="bg-white border border-slate-200 rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl">
-                        <h2 className="text-4xl font-orbitron font-bold text-center mb-8 text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+                    <div className="bg-slate-800 border border-slate-600 rounded-3xl p-8 max-w-xs w-full mx-4 shadow-2xl transform scale-100 transition-all">
+                        <h2 className="text-3xl font-orbitron font-bold text-center mb-8 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
                             {isGameOver ? 'TIME UP!' : 'PAUSED'}
                         </h2>
 
-                        <div className="space-y-4">
+                        <div className="space-y-3">
                             {!isGameOver && (
                                 <button
                                     onClick={() => setIsPaused(false)}
-                                    className="btn-primary w-full text-lg click-scale"
+                                    className="w-full py-4 bg-blue-600 hover:bg-blue-500 rounded-xl text-white font-bold text-lg shadow-lg active:scale-95 transition-all"
                                 >
-                                    ▶ Resume Game
+                                    ▶ Resume
                                 </button>
                             )}
 
@@ -161,16 +127,16 @@ export default function GamePage() {
                                     setIsGameOver(false);
                                     window.location.reload();
                                 }}
-                                className="btn-secondary w-full text-lg click-scale"
+                                className="w-full py-4 bg-slate-700 hover:bg-slate-600 rounded-xl text-white font-bold text-lg active:scale-95 transition-all"
                             >
-                                🔄 Restart Level
+                                🔄 Restart
                             </button>
 
                             <button
                                 onClick={() => router.push('/')}
-                                className="btn-secondary w-full text-lg click-scale"
+                                className="w-full py-4 bg-slate-700 hover:bg-slate-600 rounded-xl text-white font-bold text-lg active:scale-95 transition-all"
                             >
-                                🏠 Main Menu
+                                🏠 Menu
                             </button>
                         </div>
                     </div>
