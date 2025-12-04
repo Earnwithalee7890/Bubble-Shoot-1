@@ -1,68 +1,71 @@
 'use client';
 
-import { WagmiProvider } from 'wagmi';
+import { WagmiProvider, createConfig, http } from 'wagmi';
 import { base } from 'wagmi/chains';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
-import { ReactNode, useEffect } from 'react';
+import { farcasterFrame } from '@farcaster/frame-wagmi-connector';
+import { ReactNode, useEffect, useState } from 'react';
 
-// 1. Get projectId from https://cloud.walletconnect.com
-const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || '00000000000000000000000000000000';
-
-// 2. Set up Wagmi adapter
-const wagmiAdapter = new WagmiAdapter({
-    networks: [base],
-    projectId,
-    ssr: true
+// Create wagmi config with Farcaster connector
+const config = createConfig({
+    chains: [base],
+    transports: {
+        [base.id]: http(),
+    },
+    connectors: [
+        farcasterFrame(),
+    ],
 });
 
 const queryClient = new QueryClient();
 
-let appKitInitialized = false;
-
 export function Web3Provider({ children }: { children: ReactNode }) {
-    useEffect(() => {
-        // Dynamically import and initialize AppKit only on client side
-        if (!appKitInitialized && typeof window !== 'undefined') {
-            if (projectId === '00000000000000000000000000000000') {
-                console.warn('⚠️ WalletConnect Project ID is missing. Connection may fail.');
-            }
+    const [mounted, setMounted] = useState(false);
 
-            import('@reown/appkit/react').then(({ createAppKit }) => {
-                try {
-                    createAppKit({
-                        adapters: [wagmiAdapter],
-                        projectId,
-                        networks: [base],
-                        defaultNetwork: base,
-                        metadata: {
-                            name: 'Bubble Shot',
-                            description: 'Crypto Bubble Shooter Game',
-                            url: window.location.origin,
-                            icons: ['https://avatars.githubusercontent.com/u/37784886']
-                        },
-                        features: {
-                            analytics: true,
-                            email: false, // Disable email to simplify
-                            socials: [], // Disable socials to simplify
-                        },
-                        themeMode: 'dark',
-                        themeVariables: {
-                            '--w3m-accent': '#0052FF',
-                            '--w3m-border-radius-master': '12px',
-                        }
-                    });
-                    appKitInitialized = true;
-                    console.log('✅ AppKit initialized successfully');
-                } catch (error) {
-                    console.error('❌ Failed to initialize AppKit:', error);
-                }
-            });
-        }
+    useEffect(() => {
+        setMounted(true);
     }, []);
 
+    // Auto-connect to Farcaster wallet when in a Frame
+    useEffect(() => {
+        const autoConnect = async () => {
+            if (typeof window === 'undefined') return;
+
+            try {
+                // Check if we're in a Farcaster Frame context
+                const sdk = await import('@farcaster/frame-sdk');
+                const context = await sdk.default.context;
+
+                if (context) {
+                    console.log('Farcaster context detected, auto-connecting...');
+
+                    // Get the Farcaster connector
+                    const connector = config.connectors.find(c => c.id === 'farcasterFrame');
+                    if (connector) {
+                        try {
+                            await config.connect({ connector });
+                            console.log('Auto-connected to Farcaster wallet!');
+                        } catch (connectError) {
+                            console.log('Auto-connect failed, user may need to manually connect:', connectError);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.log('Not in Farcaster context or error:', error);
+            }
+        };
+
+        if (mounted) {
+            autoConnect();
+        }
+    }, [mounted]);
+
+    if (!mounted) {
+        return null;
+    }
+
     return (
-        <WagmiProvider config={wagmiAdapter.wagmiConfig}>
+        <WagmiProvider config={config}>
             <QueryClientProvider client={queryClient}>
                 {children}
             </QueryClientProvider>

@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@farcaster/frame-sdk": "^0.1.12",
+    "@farcaster/frame-wagmi-connector": "^1.0.0",
     "@reown/appkit": "^1.8.14",
     "@reown/appkit-adapter-wagmi": "^1.8.14",
     "@supabase/supabase-js": "^2.86.0",
