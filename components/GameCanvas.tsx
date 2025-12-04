@@ -293,6 +293,31 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                 if (c < 0) c = 0;
                 if (c >= maxCols) c = maxCols - 1;
 
+                // FIX: Check if position is already occupied
+                if (this.bubbles[r][c]) {
+                    // Find nearest empty position
+                    let found = false;
+                    for (let dr = -1; dr <= 1 && !found; dr++) {
+                        for (let dc = -1; dc <= 1 && !found; dc++) {
+                            const nr = r + dr;
+                            const nc = c + dc;
+                            const nMaxCols = nr % 2 === 0 ? this.GRID_COLS : this.GRID_COLS - 1;
+                            if (nr >= 0 && nr < this.GRID_ROWS && nc >= 0 && nc < nMaxCols && !this.bubbles[nr][nc]) {
+                                r = nr;
+                                c = nc;
+                                found = true;
+                            }
+                        }
+                    }
+                    // If no empty position found, just cleanup and return
+                    if (!found) {
+                        this.cleanupBullet();
+                        this.isSnapping = false;
+                        this.resetShooter();
+                        return;
+                    }
+                }
+
                 const finalRowOffsetX = r % 2 === 0 ? 0 : this.BUBBLE_RADIUS;
                 const finalX = gridStartX + finalRowOffsetX + c * (this.BUBBLE_RADIUS * 2);
                 const finalY = this.BUBBLE_RADIUS + r * rowHeight;
@@ -306,6 +331,19 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
 
                 this.checkMatches(r, c, color);
                 this.resetShooter();
+            }
+
+            private getAvailableColors(): number[] {
+                const colorsInGrid = new Set<number>();
+                for (let r = 0; r < this.GRID_ROWS; r++) {
+                    for (let c = 0; c < this.bubbles[r].length; c++) {
+                        const bubble = this.bubbles[r][c];
+                        if (bubble) {
+                            colorsInGrid.add(bubble.getData('color'));
+                        }
+                    }
+                }
+                return colorsInGrid.size > 0 ? Array.from(colorsInGrid) : [0, 1, 2, 3, 4, 5];
             }
 
             private checkMatches(startR: number, startC: number, color: number) {
@@ -442,7 +480,10 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                 this.shooter.setData('color', nextColor);
                 this.shooter.setVisible(true);
 
-                const newColor = Phaser.Math.Between(0, this.COLORS.length - 1);
+                // FIX: Only generate colors that exist in the grid
+                const availableColors = this.getAvailableColors();
+                const randomIndex = Phaser.Math.Between(0, availableColors.length - 1);
+                const newColor = availableColors[randomIndex];
                 this.nextBubble.setTexture(`bubble_${newColor}`);
                 this.nextBubble.setData('color', newColor);
 
