@@ -34,6 +34,10 @@
         ".next/types/**/*.ts"
     ],
     "exclude": [
-        "node_modules"
+        "node_modules",
+        "hardhat.config.ts",
+        "hardhat.config.cjs",
+        "scripts",
+        "contracts"
     ]
 }
