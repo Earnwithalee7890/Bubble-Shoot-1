@@ -41,7 +41,7 @@ export default function Home() {
                         BUBBLE SHOT
                     </h2>
                     <p className="text-xl md:text-2xl text-blue-200 font-inter">
-                        Crypto Bubble Shooter • Earn DEGEN Rewards
+                        Crypto Bubble Shooter • Daily Check-In Streaks
                     </p>
                 </div>
 
@@ -96,7 +96,7 @@ export default function Home() {
                         </div>
                         <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 backdrop-blur-sm border border-purple-400/30 rounded-lg p-4 text-center">
                             <div className="text-2xl font-orbitron font-bold text-purple-400">0</div>
-                            <div className="text-sm text-purple-200">DEGEN</div>
+                            <div className="text-sm text-purple-200">Points</div>
                         </div>
                         <div className="bg-gradient-to-br from-pink-500/10 to-blue-500/10 backdrop-blur-sm border border-pink-400/30 rounded-lg p-4 text-center">
                             <div className="text-2xl font-orbitron font-bold text-pink-400">0</div>
@@ -108,7 +108,7 @@ export default function Home() {
                 {/* Connect wallet prompt */}
                 {!isConnected && (
                     <div className="mt-8 text-center">
-                        <p className="text-blue-200 mb-4">Connect your wallet to start playing and earning DEGEN rewards!</p>
+                        <p className="text-blue-200 mb-4">Connect your wallet to start playing and track your daily check-in streak!</p>
                     </div>
                 )}
             </div>

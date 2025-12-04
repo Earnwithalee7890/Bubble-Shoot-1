@@ -24,28 +24,39 @@ export function Web3Provider({ children }: { children: ReactNode }) {
     useEffect(() => {
         // Dynamically import and initialize AppKit only on client side
         if (!appKitInitialized && typeof window !== 'undefined') {
+            if (projectId === '00000000000000000000000000000000') {
+                console.warn('⚠️ WalletConnect Project ID is missing. Connection may fail.');
+            }
+
             import('@reown/appkit/react').then(({ createAppKit }) => {
-                createAppKit({
-                    adapters: [wagmiAdapter],
-                    projectId,
-                    networks: [base],
-                    defaultNetwork: base,
-                    metadata: {
-                        name: 'Bubble Shot',
-                        description: 'Crypto Bubble Shooter Game',
-                        url: window.location.origin,
-                        icons: ['https://avatars.githubusercontent.com/u/37784886']
-                    },
-                    features: {
-                        analytics: true,
-                    },
-                    themeMode: 'dark',
-                    themeVariables: {
-                        '--w3m-accent': '#0052FF',
-                        '--w3m-border-radius-master': '12px',
-                    }
-                });
-                appKitInitialized = true;
+                try {
+                    createAppKit({
+                        adapters: [wagmiAdapter],
+                        projectId,
+                        networks: [base],
+                        defaultNetwork: base,
+                        metadata: {
+                            name: 'Bubble Shot',
+                            description: 'Crypto Bubble Shooter Game',
+                            url: window.location.origin,
+                            icons: ['https://avatars.githubusercontent.com/u/37784886']
+                        },
+                        features: {
+                            analytics: true,
+                            email: false, // Disable email to simplify
+                            socials: [], // Disable socials to simplify
+                        },
+                        themeMode: 'dark',
+                        themeVariables: {
+                            '--w3m-accent': '#0052FF',
+                            '--w3m-border-radius-master': '12px',
+                        }
+                    });
+                    appKitInitialized = true;
+                    console.log('✅ AppKit initialized successfully');
+                } catch (error) {
+                    console.error('❌ Failed to initialize AppKit:', error);
+                }
             });
         }
     }, []);

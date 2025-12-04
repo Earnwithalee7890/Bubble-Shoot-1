@@ -12,81 +12,91 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Address is required' }, { status: 400 });
         }
 
-        // Check if user exists
-        const { data: user, error: fetchError } = await supabase
-            .from('users')
-            .select('*')
-            .eq('address', address)
-            .single();
+        try {
+            // Try to use database
+            // Check if user exists
+            const { data: user, error: fetchError } = await supabase
+                .from('users')
+                .select('*')
+                .eq('address', address)
+                .single();
 
-        if (fetchError && fetchError.code !== 'PGRST116') {
-            console.error('Error fetching user:', fetchError);
-            return NextResponse.json({ error: 'Database error' }, { status: 500 });
-        }
+            if (fetchError && fetchError.code !== 'PGRST116') {
+                console.error('Error fetching user:', fetchError);
+                // Database not available, return success for localStorage mode
+                console.log('Database not available, using localStorage mode');
+                return NextResponse.json({
+                    success: true,
+                    streak: 1,
+                    useLocalStorage: true
+                });
+            }
 
-        const now = new Date();
-        const lastCheckIn = user?.last_check_in ? new Date(user.last_check_in) : null;
+            const now = new Date();
+            const lastCheckIn = user?.last_check_in ? new Date(user.last_check_in) : null;
 
-        // Check if already checked in today (use UTC to avoid timezone issues)
-        if (lastCheckIn) {
-            const nowUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-            const lastCheckInUTC = new Date(Date.UTC(lastCheckIn.getUTCFullYear(), lastCheckIn.getUTCMonth(), lastCheckIn.getUTCDate()));
+            // Helper to get UTC date string (YYYY-MM-DD)
+            const getUTCDateString = (date: Date) => {
+                return date.toISOString().split('T')[0];
+            };
 
-            if (nowUTC.getTime() === lastCheckInUTC.getTime()) {
+            const todayUTC = getUTCDateString(now);
+            const lastCheckInUTC = lastCheckIn ? getUTCDateString(lastCheckIn) : null;
+
+            // Check if already checked in today
+            if (lastCheckInUTC === todayUTC) {
                 return NextResponse.json({ error: 'Already checked in today', streak: user.streak }, { status: 400 });
             }
-        }
 
-        // Deduct from owner
-        const { data: owner, error: ownerError } = await supabase
-            .from('users')
-            .select('*')
-            .eq('address', OWNER_ADDRESS)
-            .single();
+            let streak = user?.streak || 0;
 
-        if (ownerError) {
-            console.warn('Owner not found, skipping deduction');
-        } else {
-            const newOwnerPoints = (owner.points || 0) - 3;
-            await supabase
-                .from('users')
-                .update({ points: newOwnerPoints })
-                .eq('address', OWNER_ADDRESS);
-        }
+            // Check if streak is broken
+            if (lastCheckIn) {
+                const yesterday = new Date(now);
+                yesterday.setDate(yesterday.getDate() - 1);
+                const yesterdayUTC = getUTCDateString(yesterday);
 
-        let streak = user?.streak || 0;
-
-        // Check if streak is broken
-        if (lastCheckIn) {
-            const yesterday = new Date(now);
-            yesterday.setDate(yesterday.getDate() - 1);
-
-            // If last check-in was before yesterday, reset streak
-            if (lastCheckIn.toDateString() !== yesterday.toDateString()) {
-                streak = 0;
+                // If last check-in was NOT yesterday, reset streak
+                // (If it was today, we already returned above. If it was before yesterday, streak breaks.)
+                if (lastCheckInUTC !== yesterdayUTC) {
+                    streak = 0;
+                }
             }
+
+            streak += 1;
+
+            // Update or insert user (no points/DEGEN rewards, just streak tracking)
+            const { error: upsertError } = await supabase
+                .from('users')
+                .upsert({
+                    address,
+                    last_check_in: now.toISOString(),
+                    streak,
+                    updated_at: now.toISOString()
+                }, { onConflict: 'address' });
+
+            if (upsertError) {
+                console.error('Error updating user:', upsertError);
+                // Database error, return success for localStorage mode
+                return NextResponse.json({
+                    success: true,
+                    streak: 1,
+                    useLocalStorage: true
+                });
+            }
+
+            return NextResponse.json({ success: true, streak });
+
+        } catch (dbError: any) {
+            console.error('Database operation failed:', dbError);
+            // Database not available, return success for localStorage mode
+            return NextResponse.json({
+                success: true,
+                streak: 1,
+                useLocalStorage: true,
+                message: 'Using local storage mode'
+            });
         }
-
-        streak += 1;
-        const points = (user?.points || 0) + 3; // Reward 3 DEGEN (points)
-
-        // Update or insert user
-        const { error: upsertError } = await supabase
-            .from('users')
-            .upsert({
-                address,
-                last_check_in: now.toISOString(),
-                streak,
-                points,
-                updated_at: now.toISOString()
-            }, { onConflict: 'address' });
-
-        if (upsertError) {
-            console.error('Error updating user:', upsertError);
-            return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
-        }
-
-        return NextResponse.json({ success: true, streak, points });
 
     } catch (error) {
         console.error('Check-in error:', error);
@@ -120,13 +130,19 @@ export async function GET(request: Request) {
         });
     }
 
+    // Helper to get UTC date string (YYYY-MM-DD) - same as in POST
+    const getUTCDateString = (date: Date) => {
+        return date.toISOString().split('T')[0];
+    };
+
     const now = new Date();
     const lastCheckIn = new Date(user.last_check_in);
 
-    // Use UTC to avoid timezone issues
-    const nowUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-    const lastCheckInUTC = new Date(Date.UTC(lastCheckIn.getUTCFullYear(), lastCheckIn.getUTCMonth(), lastCheckIn.getUTCDate()));
-    const canCheckIn = nowUTC.getTime() !== lastCheckInUTC.getTime();
+    const todayUTC = getUTCDateString(now);
+    const lastCheckInUTC = getUTCDateString(lastCheckIn);
+
+    // Can check in if last check-in was NOT today
+    const canCheckIn = todayUTC !== lastCheckInUTC;
 
     return NextResponse.json({
         canCheckIn,

@@ -40,6 +40,11 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
             private scoreText: Phaser.GameObjects.Text | null = null;
             private isShooting = false;
 
+            // New aiming properties
+            private dragStartX = 0;
+            private dragStartY = 0;
+            private isAiming = false;
+
             constructor() {
                 super({ key: 'GameScene' });
             }
@@ -86,11 +91,9 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                 this.createShooter();
 
                 // Input
-                this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-                    console.log('Pointer down:', pointer.x, pointer.y);
-                    this.shoot(pointer);
-                }, this);
-                this.input.on('pointermove', this.updateArrow, this);
+                this.input.on('pointerdown', this.handlePointerDown, this);
+                this.input.on('pointermove', this.handlePointerMove, this);
+                this.input.on('pointerup', this.handlePointerUp, this);
 
                 // Score
                 this.scoreText = this.add.text(10, 560, `Score: ${this.score}`, {
@@ -100,10 +103,48 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                 });
 
                 // Debug Text
-                this.add.text(10, 10, 'Click to Shoot!', { color: '#0f0' });
+                this.add.text(10, 10, 'Drag & Release to Shoot!', { color: '#0f0' });
 
                 // Arrow
                 this.arrow = this.add.graphics();
+            }
+
+            private handlePointerDown(pointer: Phaser.Input.Pointer) {
+                if (this.isShooting || !this.shooter) return;
+                this.isAiming = true;
+                this.dragStartX = pointer.x;
+                this.dragStartY = pointer.y;
+            }
+
+            private handlePointerMove(pointer: Phaser.Input.Pointer) {
+                if (!this.isAiming || !this.shooter || !this.arrow) return;
+
+                const angle = Phaser.Math.Angle.Between(this.shooter.x, this.shooter.y, pointer.x, pointer.y);
+
+                // Only draw/allow if aiming somewhat upward
+                if (angle > 0.1) return;
+
+                this.arrow.clear();
+                this.arrow.lineStyle(4, 0xffffff, 0.5);
+                this.arrow.beginPath();
+                this.arrow.moveTo(this.shooter.x, this.shooter.y);
+                this.arrow.lineTo(this.shooter.x + Math.cos(angle) * 150, this.shooter.y + Math.sin(angle) * 150);
+                this.arrow.strokePath();
+            }
+
+            private handlePointerUp(pointer: Phaser.Input.Pointer) {
+                if (!this.isAiming) return;
+                this.isAiming = false;
+                if (this.arrow) this.arrow.clear();
+
+                if (this.isShooting || !this.shooter) return;
+
+                const angle = Phaser.Math.Angle.Between(this.shooter.x, this.shooter.y, pointer.x, pointer.y);
+
+                // Only allow shooting upward
+                if (angle > 0.1) return;
+
+                this.shoot(angle);
             }
 
             update() {
@@ -137,7 +178,8 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                             const bubble = this.bubbles[r][c];
                             if (bubble && bubble.visible) {
                                 const dist = Phaser.Math.Distance.Between(this.bullet.x, this.bullet.y, bubble.x, bubble.y);
-                                if (dist < this.BUBBLE_RADIUS * 2 - 5) {
+                                // Improved collision threshold - snap when bubbles are touching
+                                if (dist < this.BUBBLE_RADIUS * 2 - 2) {
                                     this.snapBubble();
                                     return;
                                 }
@@ -151,14 +193,18 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                 this.bubbles = Array(this.GRID_ROWS).fill(null).map(() => Array(this.GRID_COLS).fill(null));
                 const rowsToFill = Math.min(3 + Math.floor(level / 2), this.GRID_ROWS - 4);
 
+                // Calculate grid starting position to center it
+                const gridStartX = (800 - (this.GRID_COLS * this.BUBBLE_RADIUS * 2)) / 2 + this.BUBBLE_RADIUS;
+
                 for (let r = 0; r < rowsToFill; r++) {
                     const cols = r % 2 === 0 ? this.GRID_COLS : this.GRID_COLS - 1;
-                    const offsetX = r % 2 === 0 ? this.BUBBLE_RADIUS : this.BUBBLE_RADIUS * 2;
+                    // Odd rows are offset by one bubble radius to the right
+                    const offsetX = r % 2 === 0 ? 0 : this.BUBBLE_RADIUS;
 
                     for (let c = 0; c < cols; c++) {
                         const colorIdx = Phaser.Math.Between(0, this.COLORS.length - 1);
-                        const x = offsetX + c * (this.BUBBLE_RADIUS * 2) + (800 - (this.GRID_COLS * this.BUBBLE_RADIUS * 2)) / 2;
-                        const y = this.BUBBLE_RADIUS + r * (this.BUBBLE_RADIUS * 1.732);
+                        const x = gridStartX + offsetX + c * (this.BUBBLE_RADIUS * 2);
+                        const y = this.BUBBLE_RADIUS + r * (this.BUBBLE_RADIUS * Math.sqrt(3));
 
                         const bubble = this.add.sprite(x, y, `bubble_${colorIdx}`);
                         bubble.setData('color', colorIdx);
@@ -183,28 +229,11 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
             }
 
             private updateArrow(pointer: Phaser.Input.Pointer) {
-                if (this.isShooting || !this.shooter || !this.arrow) return;
-                const angle = Phaser.Math.Angle.Between(this.shooter.x, this.shooter.y, pointer.x, pointer.y);
-                if (angle > 0.1) return; // Only draw arrow when shooting upward
-
-                this.arrow.clear();
-                this.arrow.lineStyle(2, 0xffffff, 0.5);
-                this.arrow.beginPath();
-                this.arrow.moveTo(this.shooter.x, this.shooter.y);
-                this.arrow.lineTo(this.shooter.x + Math.cos(angle) * 100, this.shooter.y + Math.sin(angle) * 100);
-                this.arrow.strokePath();
+                // Replaced by handlePointerMove
             }
 
-            private shoot(pointer: Phaser.Input.Pointer) {
+            private shoot(angle: number) {
                 if (this.isShooting || !this.shooter) return;
-
-                const angle = Phaser.Math.Angle.Between(this.shooter.x, this.shooter.y, pointer.x, pointer.y);
-
-                // Only allow shooting upward
-                if (angle > 0.1) {
-                    console.log('Cannot shoot downward');
-                    return;
-                }
 
                 console.log('Shooting! Angle:', angle);
                 this.isShooting = true;
@@ -214,7 +243,7 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                 this.bullet.setCollideWorldBounds(true);
                 this.bullet.setBounce(1);
 
-                const speed = 800;
+                const speed = 1200;
                 this.bullet.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
 
                 // Add trail effect
@@ -270,16 +299,19 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                 const y = this.bullet.y;
                 const color = this.bullet.getData('color');
 
-                const gridWidth = (800 - (this.GRID_COLS * this.BUBBLE_RADIUS * 2)) / 2;
-                const rowHeight = this.BUBBLE_RADIUS * 1.732;
+                // Use consistent grid calculations
+                const gridStartX = (800 - (this.GRID_COLS * this.BUBBLE_RADIUS * 2)) / 2 + this.BUBBLE_RADIUS;
+                const rowHeight = this.BUBBLE_RADIUS * Math.sqrt(3);
 
+                // Calculate which row the bullet should snap to
                 let r = Math.round((y - this.BUBBLE_RADIUS) / rowHeight);
                 if (r < 0) r = 0;
                 if (r >= this.GRID_ROWS) r = this.GRID_ROWS - 1;
 
+                // Calculate which column based on row parity
                 const isEvenRow = r % 2 === 0;
-                const offsetX = isEvenRow ? this.BUBBLE_RADIUS : this.BUBBLE_RADIUS * 2;
-                const effectiveX = x - gridWidth - offsetX + this.BUBBLE_RADIUS;
+                const rowOffsetX = isEvenRow ? 0 : this.BUBBLE_RADIUS;
+                const effectiveX = x - gridStartX - rowOffsetX;
 
                 let c = Math.round(effectiveX / (this.BUBBLE_RADIUS * 2));
                 const maxCols = isEvenRow ? this.GRID_COLS : this.GRID_COLS - 1;
@@ -289,22 +321,43 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                 // Check if position is already occupied, find nearest empty spot
                 if (this.bubbles[r][c]) {
                     let found = false;
-                    // Try to find an empty adjacent spot
-                    for (let dr = -1; dr <= 1 && !found; dr++) {
-                        for (let dc = -1; dc <= 1 && !found; dc++) {
+                    let minDist = Infinity;
+                    let bestR = r;
+                    let bestC = c;
+
+                    // Search in a wider radius for empty spots
+                    for (let dr = -2; dr <= 2; dr++) {
+                        for (let dc = -2; dc <= 2; dc++) {
                             const nr = r + dr;
                             const nc = c + dc;
                             const nMaxCols = nr % 2 === 0 ? this.GRID_COLS : this.GRID_COLS - 1;
+
                             if (nr >= 0 && nr < this.GRID_ROWS && nc >= 0 && nc < nMaxCols && !this.bubbles[nr][nc]) {
-                                r = nr;
-                                c = nc;
-                                found = true;
+                                // Calculate actual position of this grid cell
+                                const nRowOffsetX = nr % 2 === 0 ? 0 : this.BUBBLE_RADIUS;
+                                const cellX = gridStartX + nRowOffsetX + nc * (this.BUBBLE_RADIUS * 2);
+                                const cellY = this.BUBBLE_RADIUS + nr * rowHeight;
+                                const dist = Phaser.Math.Distance.Between(x, y, cellX, cellY);
+
+                                if (dist < minDist) {
+                                    minDist = dist;
+                                    bestR = nr;
+                                    bestC = nc;
+                                    found = true;
+                                }
                             }
                         }
                     }
+
+                    if (found) {
+                        r = bestR;
+                        c = bestC;
+                    }
                 }
 
-                const finalX = gridWidth + offsetX + c * (this.BUBBLE_RADIUS * 2);
+                // Calculate final position using the same formula as createGrid
+                const finalRowOffsetX = r % 2 === 0 ? 0 : this.BUBBLE_RADIUS;
+                const finalX = gridStartX + finalRowOffsetX + c * (this.BUBBLE_RADIUS * 2);
                 const finalY = this.BUBBLE_RADIUS + r * rowHeight;
 
                 const newBubble = this.add.sprite(finalX, finalY, `bubble_${color}`);
