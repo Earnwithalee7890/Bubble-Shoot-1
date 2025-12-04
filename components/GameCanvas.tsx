@@ -33,9 +33,9 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
             // Mobile Portrait Settings
             private readonly GAME_WIDTH = 360;
             private readonly GAME_HEIGHT = 640;
-            private readonly BUBBLE_RADIUS = 20; // Diameter 40
+            private readonly BUBBLE_RADIUS = 20;
             private readonly GRID_ROWS = 14;
-            private readonly GRID_COLS = 8; // 8 * 40 = 320px, fits in 360px with margin
+            private readonly GRID_COLS = 8;
             private readonly COLORS = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff, 0x00ffff];
 
             private score = 0;
@@ -52,20 +52,42 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
 
                 this.COLORS.forEach((color, index) => {
                     graphics.clear();
-                    graphics.fillStyle(color, 1);
-                    graphics.fillCircle(this.BUBBLE_RADIUS, this.BUBBLE_RADIUS, this.BUBBLE_RADIUS);
-                    // 3D effect
-                    graphics.fillStyle(0x000000, 0.2);
-                    graphics.fillCircle(this.BUBBLE_RADIUS, this.BUBBLE_RADIUS + 2, this.BUBBLE_RADIUS - 2);
-                    graphics.fillStyle(0xffffff, 0.6);
-                    graphics.fillCircle(this.BUBBLE_RADIUS - 6, this.BUBBLE_RADIUS - 6, 6);
+
+                    // Different designs based on level
+                    if (level % 3 === 1) {
+                        // Design 1: Glossy (Standard)
+                        graphics.fillStyle(color, 1);
+                        graphics.fillCircle(this.BUBBLE_RADIUS, this.BUBBLE_RADIUS, this.BUBBLE_RADIUS);
+                        graphics.fillStyle(0x000000, 0.2);
+                        graphics.fillCircle(this.BUBBLE_RADIUS, this.BUBBLE_RADIUS + 2, this.BUBBLE_RADIUS - 2);
+                        graphics.fillStyle(0xffffff, 0.6);
+                        graphics.fillCircle(this.BUBBLE_RADIUS - 6, this.BUBBLE_RADIUS - 6, 6);
+                    } else if (level % 3 === 2) {
+                        // Design 2: Matte / Solid with Ring
+                        graphics.fillStyle(color, 1);
+                        graphics.fillCircle(this.BUBBLE_RADIUS, this.BUBBLE_RADIUS, this.BUBBLE_RADIUS);
+                        graphics.lineStyle(2, 0xffffff, 0.5);
+                        graphics.strokeCircle(this.BUBBLE_RADIUS, this.BUBBLE_RADIUS, this.BUBBLE_RADIUS - 2);
+                    } else {
+                        // Design 3: Neon / Metallic
+                        graphics.fillStyle(color, 0.8);
+                        graphics.fillCircle(this.BUBBLE_RADIUS, this.BUBBLE_RADIUS, this.BUBBLE_RADIUS);
+                        graphics.fillStyle(0xffffff, 0.8);
+                        graphics.fillCircle(this.BUBBLE_RADIUS, this.BUBBLE_RADIUS, 5); // Center dot
+                        graphics.lineStyle(2, color, 1);
+                        graphics.strokeCircle(this.BUBBLE_RADIUS, this.BUBBLE_RADIUS, this.BUBBLE_RADIUS);
+                    }
+
                     graphics.generateTexture(`bubble_${index}`, this.BUBBLE_RADIUS * 2, this.BUBBLE_RADIUS * 2);
                 });
             }
 
             create() {
-                // Background
-                this.add.rectangle(this.GAME_WIDTH / 2, this.GAME_HEIGHT / 2, this.GAME_WIDTH, this.GAME_HEIGHT, 0x1e293b);
+                // Dynamic Background based on level
+                const bgColors = [0x1e293b, 0x2e1065, 0x172554, 0x312e81, 0x4c1d95];
+                const bgColor = bgColors[(level - 1) % bgColors.length];
+
+                this.add.rectangle(this.GAME_WIDTH / 2, this.GAME_HEIGHT / 2, this.GAME_WIDTH, this.GAME_HEIGHT, bgColor);
                 this.physics.world.setBounds(0, 0, this.GAME_WIDTH, this.GAME_HEIGHT);
 
                 this.createGrid();
@@ -75,19 +97,17 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                 this.input.on('pointermove', this.handlePointerMove, this);
                 this.input.on('pointerup', this.handlePointerUp, this);
 
-                // Score Text (Top Left)
                 this.scoreText = this.add.text(10, 10, `Score: ${this.score}`, {
                     fontSize: '20px',
                     color: '#ffffff',
                     fontFamily: 'Orbitron'
                 });
 
-                // Helper Text (Bottom Center)
                 this.add.text(this.GAME_WIDTH / 2, this.GAME_HEIGHT - 100, 'Drag & Release', {
-                    color: '#94a3b8',
+                    color: '#ffffff',
                     fontSize: '14px',
                     fontFamily: 'Inter'
-                }).setOrigin(0.5);
+                }).setOrigin(0.5).setAlpha(0.5);
 
                 this.arrow = this.add.graphics();
             }
@@ -101,7 +121,6 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                 if (!this.isAiming || !this.shooter || !this.arrow) return;
 
                 const angle = Phaser.Math.Angle.Between(this.shooter.x, this.shooter.y, pointer.x, pointer.y);
-                // Limit aiming angle to prevent shooting down
                 if (angle > 0.1 && angle < 3.0) return;
 
                 this.arrow.clear();
@@ -125,37 +144,49 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                 this.shoot(angle);
             }
 
+            private wallHitEffect(x: number, y: number) {
+                // Glitch / Shake effect
+                this.cameras.main.shake(100, 0.01);
+
+                // Particle burst
+                const particles = this.add.particles(x, y, `bubble_${this.bullet?.getData('color') || 0}`, {
+                    speed: { min: 50, max: 150 },
+                    scale: { start: 0.2, end: 0 },
+                    lifespan: 300,
+                    quantity: 5,
+                    blendMode: 'ADD'
+                });
+                this.time.delayedCall(300, () => particles.destroy());
+            }
+
             update() {
                 if (this.bullet && this.bullet.active && !this.isSnapping) {
                     const velocity = this.bullet.body!.velocity;
 
-                    // 1. Stuck check
                     if (Math.abs(velocity.x) < 10 && Math.abs(velocity.y) < 10) {
                         this.snapBubble();
                         return;
                     }
 
-                    // 2. Wall bounce
+                    // Wall bounce with Glitch Effect
                     if (this.bullet.x <= this.BUBBLE_RADIUS) {
-                        this.bullet.setVelocityX(Math.abs(velocity.x)); // Force right
+                        this.bullet.setVelocityX(Math.abs(velocity.x));
+                        this.wallHitEffect(this.bullet.x, this.bullet.y);
                     } else if (this.bullet.x >= this.GAME_WIDTH - this.BUBBLE_RADIUS) {
-                        this.bullet.setVelocityX(-Math.abs(velocity.x)); // Force left
+                        this.bullet.setVelocityX(-Math.abs(velocity.x));
+                        this.wallHitEffect(this.bullet.x, this.bullet.y);
                     }
 
-                    // 3. Ceiling snap
                     if (this.bullet.y <= this.BUBBLE_RADIUS) {
                         this.snapBubble();
                         return;
                     }
 
-                    // 4. Bubble collision
-                    // Check distance to all bubbles
                     for (let r = 0; r < this.GRID_ROWS; r++) {
                         for (let c = 0; c < this.bubbles[r].length; c++) {
                             const bubble = this.bubbles[r][c];
                             if (bubble && bubble.visible) {
                                 const dist = Phaser.Math.Distance.Between(this.bullet.x, this.bullet.y, bubble.x, bubble.y);
-                                // Snap if touching (allow small overlap for better feel)
                                 if (dist < this.BUBBLE_RADIUS * 2 - 5) {
                                     this.snapBubble();
                                     return;
@@ -169,8 +200,6 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
             private createGrid() {
                 this.bubbles = Array(this.GRID_ROWS).fill(null).map(() => Array(this.GRID_COLS).fill(null));
                 const rowsToFill = Math.min(5 + Math.floor(level / 2), this.GRID_ROWS - 5);
-
-                // Center the grid horizontally
                 const gridWidth = this.GRID_COLS * this.BUBBLE_RADIUS * 2;
                 const gridStartX = (this.GAME_WIDTH - gridWidth) / 2 + this.BUBBLE_RADIUS;
 
@@ -212,9 +241,9 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                 this.bullet = this.physics.add.sprite(this.shooter.x, this.shooter.y, this.shooter.texture.key);
                 this.bullet.setData('color', this.shooter.getData('color'));
                 this.bullet.setCollideWorldBounds(true);
-                this.bullet.setBounce(1, 1); // Perfect bounce
+                this.bullet.setBounce(1, 1);
 
-                const speed = 1000; // Fast speed
+                const speed = 1000;
                 this.bullet.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
 
                 this.shooter.setVisible(false);
@@ -242,7 +271,6 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                 if (!this.bullet || this.isSnapping) return;
                 this.isSnapping = true;
 
-                // Stop bullet immediately
                 this.bullet.setVelocity(0, 0);
                 const x = this.bullet.x;
                 const y = this.bullet.y;
@@ -252,7 +280,6 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                 const gridStartX = (this.GAME_WIDTH - gridWidth) / 2 + this.BUBBLE_RADIUS;
                 const rowHeight = this.BUBBLE_RADIUS * Math.sqrt(3);
 
-                // Find nearest grid spot
                 let r = Math.round((y - this.BUBBLE_RADIUS) / rowHeight);
                 if (r < 0) r = 0;
                 if (r >= this.GRID_ROWS) r = this.GRID_ROWS - 1;
@@ -265,13 +292,6 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                 const maxCols = isEvenRow ? this.GRID_COLS : this.GRID_COLS - 1;
                 if (c < 0) c = 0;
                 if (c >= maxCols) c = maxCols - 1;
-
-                // If spot taken, try neighbors (simple fallback)
-                if (this.bubbles[r][c]) {
-                    // In a full implementation, we'd search neighbors. 
-                    // For now, just destroy to prevent stuck state if logic fails
-                    // Or ideally, find nearest empty neighbor
-                }
 
                 const finalRowOffsetX = r % 2 === 0 ? 0 : this.BUBBLE_RADIUS;
                 const finalX = gridStartX + finalRowOffsetX + c * (this.BUBBLE_RADIUS * 2);
@@ -289,7 +309,6 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
             }
 
             private checkMatches(startR: number, startC: number, color: number) {
-                // ... (Match logic same as before, just ensuring it uses new grid size)
                 const visited = new Set<string>();
                 const matches: { r: number, c: number }[] = [];
                 const queue: { r: number, c: number }[] = [{ r: startR, c: startC }];
@@ -364,7 +383,6 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                 const connected = new Set<string>();
                 const queue: { r: number, c: number }[] = [];
 
-                // Start from top row
                 for (let c = 0; c < this.GRID_COLS; c++) {
                     if (this.bubbles[0][c]) {
                         queue.push({ r: 0, c });
@@ -443,7 +461,7 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                 width: 360,
                 height: 640,
             },
-            backgroundColor: '#1e293b',
+            backgroundColor: '#1e293b', // Default fallback
             physics: {
                 default: 'arcade',
                 arcade: {
