@@ -25,7 +25,7 @@ export default function Home() {
             {/* Header */}
             <header className="relative z-10 flex justify-between items-center p-6">
                 <div className="flex items-center gap-4">
-                    <div className="text-4xl">🎯</div>
+                    <img src="/images/logo.png" alt="Bubble Shot" className="w-10 h-10 rounded-full border-2 border-blue-400" />
                     <h1 className="text-2xl font-orbitron font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
                         BUBBLE SHOT
                     </h1>
@@ -36,11 +36,18 @@ export default function Home() {
             {/* Main content */}
             <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-120px)] px-4">
                 {/* Title */}
-                <div className="text-center mb-12">
-                    <h2 className="text-6xl md:text-8xl font-orbitron font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 animate-gradient">
+                <div className="text-center mb-8">
+                    <div className="relative w-64 h-64 mx-auto mb-4 animate-float">
+                        <img
+                            src="/images/logo.png"
+                            alt="Bubble Shot Logo"
+                            className="w-full h-full object-contain drop-shadow-[0_0_30px_rgba(59,130,246,0.5)]"
+                        />
+                    </div>
+                    <h2 className="text-5xl md:text-7xl font-orbitron font-bold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 animate-gradient hidden">
                         BUBBLE SHOT
                     </h2>
-                    <p className="text-xl md:text-2xl text-blue-200 font-inter">
+                    <p className="text-xl md:text-2xl text-blue-200 font-inter mt-4">
                         Crypto Bubble Shooter • Daily Check-In Streaks
                     </p>
                 </div>
