@@ -73,6 +73,13 @@ export default function Home() {
                     </button>
 
                     <Link
+                        href="/profile"
+                        className="block w-full bg-gradient-to-r from-purple-500/20 to-blue-500/20 hover:from-purple-500/30 hover:to-blue-500/30 border-2 border-purple-400/50 text-purple-200 font-orbitron font-bold py-4 px-8 rounded-xl text-xl transition-all duration-300 transform hover:scale-105 backdrop-blur-sm text-center"
+                    >
+                        👤 PROFILE
+                    </Link>
+
+                    <Link
                         href="/leaderboard"
                         className="block w-full bg-gradient-to-r from-purple-500/20 to-blue-500/20 hover:from-purple-500/30 hover:to-blue-500/30 border-2 border-purple-400/50 text-purple-200 font-orbitron font-bold py-4 px-8 rounded-xl text-xl transition-all duration-300 transform hover:scale-105 backdrop-blur-sm text-center"
                     >

@@ -23,20 +23,14 @@ export default function LeaderboardPage() {
     const fetchLeaderboard = async () => {
         setLoading(true);
         try {
-            // TODO: Fetch from backend API
-            // const response = await fetch(`/api/leaderboard?timeframe=${timeframe}`);
-            // const data = await response.json();
-            // setLeaderboard(data);
-
-            // Mock data for now
-            const mockData: LeaderboardEntry[] = [
-                { rank: 1, address: '0x1234...5678', score: 125000, level: 150 },
-                { rank: 2, address: '0xabcd...efgh', score: 98000, level: 120 },
-                { rank: 3, address: '0x9876...4321', score: 87000, level: 110 },
-            ];
-            setLeaderboard(mockData);
+            const response = await fetch(`/api/leaderboard?timeframe=${timeframe}`);
+            if (!response.ok) throw new Error('Failed to fetch');
+            const data = await response.json();
+            setLeaderboard(data);
         } catch (error) {
             console.error('Failed to fetch leaderboard:', error);
+            // Fallback to empty or error state, but don't use mock data anymore
+            setLeaderboard([]);
         } finally {
             setLoading(false);
         }
@@ -74,8 +68,8 @@ export default function LeaderboardPage() {
                             key={tf}
                             onClick={() => setTimeframe(tf)}
                             className={`px-6 py-2 rounded-lg font-orbitron font-bold transition-all ${timeframe === tf
-                                    ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white'
-                                    : 'bg-blue-500/20 border border-blue-400/50 text-blue-200 hover:bg-blue-500/30'
+                                ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white'
+                                : 'bg-blue-500/20 border border-blue-400/50 text-blue-200 hover:bg-blue-500/30'
                                 } backdrop-blur-sm`}
                         >
                             {tf === 'daily' ? '📅 Daily' : tf === 'weekly' ? '📊 Weekly' : '🌟 All Time'}
@@ -117,9 +111,9 @@ export default function LeaderboardPage() {
                                     {/* Rank */}
                                     <div className="flex items-center gap-4">
                                         <div className={`text-4xl font-orbitron font-bold ${entry.rank === 1 ? 'text-yellow-400' :
-                                                entry.rank === 2 ? 'text-gray-300' :
-                                                    entry.rank === 3 ? 'text-orange-600' :
-                                                        'text-blue-300'
+                                            entry.rank === 2 ? 'text-gray-300' :
+                                                entry.rank === 3 ? 'text-orange-600' :
+                                                    'text-blue-300'
                                             }`}>
                                             {entry.rank === 1 ? '🥇' : entry.rank === 2 ? '🥈' : entry.rank === 3 ? '🥉' : `#${entry.rank}`}
                                         </div>

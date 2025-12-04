@@ -584,7 +584,7 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
         <div className="relative w-full flex justify-center">
             <div
                 ref={containerRef}
-                className="rounded-2xl overflow-hidden shadow-2xl border-4 border-blue-400/50 w-full max-w-[800px] aspect-[4/3]"
+                className="rounded-2xl overflow-hidden shadow-2xl border-4 border-blue-400/50 w-full max-w-[800px] max-h-[80vh] aspect-[4/3] mx-auto"
             />
             {isPaused && (
                 <div className="absolute inset-0 bg-black/70 backdrop-blur-sm rounded-2xl flex items-center justify-center">
