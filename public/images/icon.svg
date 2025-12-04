@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e"/>
+      <stop offset="100%" style="stop-color:#16213e"/>
+    </linearGradient>
+    <linearGradient id="bubble1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea"/>
+      <stop offset="100%" style="stop-color:#764ba2"/>
+    </linearGradient>
+    <linearGradient id="bubble2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f093fb"/>
+      <stop offset="100%" style="stop-color:#f5576c"/>
+    </linearGradient>
+    <linearGradient id="bubble3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4facfe"/>
+      <stop offset="100%" style="stop-color:#00f2fe"/>
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" rx="40" fill="url(#bg)"/>
+  <circle cx="70" cy="60" r="30" fill="url(#bubble1)" opacity="0.9"/>
+  <circle cx="130" cy="70" r="25" fill="url(#bubble2)" opacity="0.9"/>
+  <circle cx="100" cy="120" r="35" fill="url(#bubble3)" opacity="0.9"/>
+  <circle cx="55" cy="130" r="20" fill="url(#bubble1)" opacity="0.7"/>
+  <circle cx="145" cy="140" r="22" fill="url(#bubble2)" opacity="0.7"/>
+  <text x="100" y="175" font-family="Arial, sans-serif" font-size="18" font-weight="bold" fill="white" text-anchor="middle">🎯</text>
+</svg>

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e"/>
+      <stop offset="50%" style="stop-color:#16213e"/>
+      <stop offset="100%" style="stop-color:#0f0f23"/>
+    </linearGradient>
+    <linearGradient id="text" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#667eea"/>
+      <stop offset="50%" style="stop-color:#f093fb"/>
+      <stop offset="100%" style="stop-color:#4facfe"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <circle cx="150" cy="150" r="60" fill="#667eea" opacity="0.6"/>
+  <circle cx="1050" cy="480" r="80" fill="#f093fb" opacity="0.5"/>
+  <circle cx="200" cy="500" r="40" fill="#4facfe" opacity="0.4"/>
+  <circle cx="1000" cy="120" r="50" fill="#764ba2" opacity="0.5"/>
+  <circle cx="300" cy="300" r="30" fill="#f5576c" opacity="0.4"/>
+  <circle cx="900" cy="350" r="45" fill="#00f2fe" opacity="0.4"/>
+  <text x="600" y="280" font-family="Arial Black, sans-serif" font-size="120" font-weight="bold" fill="url(#text)" text-anchor="middle">BUBBLE SHOT</text>
+  <text x="600" y="380" font-family="Arial, sans-serif" font-size="36" fill="#a0a0ff" text-anchor="middle">Crypto Bubble Shooter • Daily Check-in • Base Mainnet</text>
+  <rect x="450" y="450" width="300" height="70" rx="35" fill="#667eea"/>
+  <text x="600" y="498" font-family="Arial, sans-serif" font-size="28" font-weight="bold" fill="white" text-anchor="middle">🎮 PLAY NOW</text>
+</svg>

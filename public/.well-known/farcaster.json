@@ -1,0 +1,18 @@
+{
+    "accountAssociation": {
+        "header": "eyJmaWQiOjAsInR5cGUiOiJjdXN0b2R5Iiwia2V5IjoiMHgwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwIn0",
+        "payload": "eyJkb21haW4iOiJidWJibGUtc2hvb3QtMS52ZXJjZWwuYXBwIn0",
+        "signature": "MHgwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA"
+    },
+    "frame": {
+        "version": "1",
+        "name": "Bubble Shot",
+        "iconUrl": "https://bubble-shoot-1.vercel.app/images/icon.svg",
+        "homeUrl": "https://bubble-shoot-1.vercel.app",
+        "imageUrl": "https://bubble-shoot-1.vercel.app/images/og-image.svg",
+        "buttonTitle": "Play Now",
+        "splashImageUrl": "https://bubble-shoot-1.vercel.app/images/splash.svg",
+        "splashBackgroundColor": "#1a1a2e",
+        "webhookUrl": "https://bubble-shoot-1.vercel.app/api/webhook"
+    }
+}
