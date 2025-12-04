@@ -5,73 +5,97 @@
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
-  --background: #0a0e27;
-  --foreground: #ffffff;
-  --base-blue: #0052FF;
-  --neon-blue: #00D4FF;
-  --neon-purple: #B026FF;
-  --neon-pink: #FF006E;
+  /* Premium White Theme */
+  --background: #f8fafc;
+  --foreground: #1e293b;
+  --base-blue: #3b82f6;
+  --neon-blue: #0ea5e9;
+  --neon-purple: #8b5cf6;
+  --neon-pink: #ec4899;
+  --card-bg: rgba(255, 255, 255, 0.8);
+  --card-border: rgba(255, 255, 255, 0.6);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
 }
 
 .cyber-grid {
   background-image:
-    linear-gradient(rgba(0, 212, 255, 0.1) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 212, 255, 0.1) 1px, transparent 1px);
+    linear-gradient(rgba(59, 130, 246, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59, 130, 246, 0.05) 1px, transparent 1px);
   background-size: 50px 50px;
 }
 
 .neon-text {
   text-shadow:
-    0 0 10px rgba(0, 212, 255, 0.8),
-    0 0 20px rgba(0, 212, 255, 0.6),
-    0 0 30px rgba(0, 212, 255, 0.4);
-}
-
-.neon-border {
-  border: 2px solid var(--neon-blue);
-  box-shadow:
-    0 0 10px rgba(0, 212, 255, 0.5),
-    inset 0 0 10px rgba(0, 212, 255, 0.2);
+    0 0 10px rgba(59, 130, 246, 0.3),
+    0 0 20px rgba(59, 130, 246, 0.2);
 }
 
 .glass-effect {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--card-bg);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--card-border);
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.05),
+    0 2px 4px -1px rgba(0, 0, 0, 0.03),
+    inset 0 0 20px rgba(255, 255, 255, 0.5);
 }
 
 .btn-primary {
   background: linear-gradient(135deg, var(--base-blue), var(--neon-blue));
   color: white;
   padding: 12px 32px;
-  border-radius: 12px;
-  font-weight: 600;
+  border-radius: 16px;
+  font-weight: 700;
   border: none;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 0 20px rgba(0, 82, 255, 0.4);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary:active {
+  transform: scale(0.95);
 }
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 0 30px rgba(0, 82, 255, 0.6);
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
 }
 
 .btn-secondary {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  color: white;
+  background: white;
+  color: var(--base-blue);
   padding: 12px 32px;
-  border-radius: 12px;
-  font-weight: 600;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  font-weight: 700;
+  border: 2px solid rgba(59, 130, 246, 0.1);
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.btn-secondary:active {
+  transform: scale(0.95);
 }
 
 .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.15);
-  border-color: var(--neon-blue);
+  border-color: var(--base-blue);
+  background: #f0f9ff;
+  transform: translateY(-2px);
+}
+
+/* Premium Click Animation */
+.click-scale {
+  transition: transform 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.click-scale:active {
+  transform: scale(0.95);
 }
 
 @keyframes float {
@@ -82,7 +106,7 @@
   }
 
   50% {
-    transform: translateY(-20px);
+    transform: translateY(-15px);
   }
 }
 
@@ -90,36 +114,36 @@
 
   0%,
   100% {
-    box-shadow: 0 0 20px rgba(0, 212, 255, 0.4);
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
   }
 
   50% {
-    box-shadow: 0 0 40px rgba(0, 212, 255, 0.8);
+    box-shadow: 0 0 40px rgba(59, 130, 246, 0.4);
   }
 }
 
 .animate-float {
-  animation: float 3s ease-in-out infinite;
+  animation: float 4s ease-in-out infinite;
 }
 
 .animate-glow-pulse {
-  animation: glow-pulse 2s ease-in-out infinite;
+  animation: glow-pulse 3s ease-in-out infinite;
 }
 
 /* Scrollbar styling */
 ::-webkit-scrollbar {
-  width: 10px;
+  width: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, var(--base-blue), var(--neon-blue));
-  border-radius: 5px;
+  background: #cbd5e1;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, var(--neon-blue), var(--base-blue));
+  background: #94a3b8;
 }

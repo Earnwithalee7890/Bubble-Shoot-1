@@ -1,181 +1,98 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
 import { useAccount } from "wagmi";
 import { useCheckIn } from "@/hooks/useCheckIn";
-
-interface UserProfile {
-    address: string;
-    points: number;
-    level: number;
-    streak: number;
-    last_check_in: string | null;
-}
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
 export default function ProfilePage() {
-    const router = useRouter();
     const { address, isConnected } = useAccount();
-    const { streak: hookStreak } = useCheckIn(); // Use hook for real-time streak if available
-    const [profile, setProfile] = useState<UserProfile | null>(null);
-    const [loading, setLoading] = useState(true);
+    const { streak, lastCheckIn } = useCheckIn();
+    const [level, setLevel] = useState(1);
+    const [points, setPoints] = useState(0);
 
     useEffect(() => {
-        if (isConnected && address) {
-            fetchProfile();
-        } else {
-            setLoading(false);
-        }
-    }, [address, isConnected]);
+        // Fetch real stats from API if needed, for now using local state/checkin hook
+        // In a real app, you'd fetch user profile data here
+    }, [address]);
 
-    const fetchProfile = async () => {
-        if (!address) return;
-        setLoading(true);
-        try {
-            // Reuse the check-in GET endpoint which returns user data
-            const response = await fetch(`/api/check-in?address=${address}`);
-            const data = await response.json();
-
-            if (data) {
-                setProfile({
-                    address: address,
-                    points: data.points || 0,
-                    level: 1, // TODO: Store level in DB
-                    streak: data.streak || 0,
-                    last_check_in: data.lastCheckIn
-                });
-            }
-        } catch (error) {
-            console.error('Failed to fetch profile:', error);
-        } finally {
-            setLoading(false);
-        }
+    const formatAddress = (addr: string) => {
+        return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
     };
 
-    if (!isConnected) {
-        return (
-            <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 flex flex-col items-center justify-center p-4">
-                <div className="bg-black/40 backdrop-blur-md p-8 rounded-2xl border border-blue-500/30 text-center max-w-md w-full">
-                    <div className="text-6xl mb-4">🔒</div>
-                    <h1 className="text-2xl font-orbitron font-bold text-white mb-4">Wallet Not Connected</h1>
-                    <p className="text-blue-200 mb-8">Please connect your wallet to view your profile and stats.</p>
-                    <button
-                        onClick={() => router.push('/')}
-                        className="w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white font-orbitron font-bold py-3 px-6 rounded-xl hover:scale-105 transition-transform"
-                    >
-                        Go Home
-                    </button>
-                </div>
-            </div>
-        );
-    }
-
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 relative overflow-hidden">
-            {/* Background effects */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute top-20 left-20 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
-                <div className="absolute bottom-20 right-20 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
-            </div>
+        <main className="min-h-screen bg-slate-50 relative overflow-hidden cyber-grid flex flex-col">
+            {/* Header */}
+            <header className="relative z-10 flex items-center p-4 md:p-6">
+                <Link href="/" className="btn-secondary px-4 py-2 text-sm flex items-center gap-2 click-scale">
+                    ← Back
+                </Link>
+                <h1 className="text-2xl font-orbitron font-bold text-slate-800 ml-4">
+                    MY PROFILE
+                </h1>
+            </header>
 
-            <div className="relative z-10 p-6 max-w-4xl mx-auto">
-                {/* Header */}
-                <div className="flex items-center justify-between mb-8">
-                    <button
-                        onClick={() => router.push('/')}
-                        className="bg-blue-500/20 hover:bg-blue-500/30 border border-blue-400/50 text-blue-200 font-orbitron px-6 py-2 rounded-lg transition-all backdrop-blur-sm"
-                    >
-                        ← Back
-                    </button>
-                    <h1 className="text-3xl md:text-4xl font-orbitron font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
-                        MY PROFILE
-                    </h1>
-                    <div className="w-24"></div>
+            {/* Content */}
+            <div className="flex-1 relative z-10 flex flex-col items-center px-4 py-6 w-full max-w-md mx-auto">
+
+                {/* Profile Card */}
+                <div className="w-full bg-white/80 backdrop-blur-md border border-slate-200 rounded-3xl p-6 shadow-xl mb-6 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl -mr-10 -mt-10"></div>
+
+                    <div className="flex flex-col items-center text-center relative z-10">
+                        <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-purple-100 rounded-full flex items-center justify-center mb-4 shadow-inner border-4 border-white">
+                            <span className="text-4xl">👤</span>
+                        </div>
+
+                        <h2 className="text-xl font-bold text-slate-800 font-orbitron mb-1">
+                            {isConnected && address ? formatAddress(address) : "Guest Player"}
+                        </h2>
+
+                        <div className="flex items-center gap-2 mt-2">
+                            <span className="px-3 py-1 bg-blue-100 text-blue-600 rounded-full text-xs font-bold uppercase tracking-wider">
+                                Base Mainnet
+                            </span>
+                            <span className="px-3 py-1 bg-purple-100 text-purple-600 rounded-full text-xs font-bold uppercase tracking-wider">
+                                Player
+                            </span>
+                        </div>
+                    </div>
                 </div>
 
-                {loading ? (
-                    <div className="text-center py-20">
-                        <div className="inline-block w-12 h-12 border-4 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                {/* Stats Grid */}
+                <div className="w-full grid grid-cols-2 gap-4 mb-6">
+                    <div className="bg-white/80 backdrop-blur-sm border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col items-center justify-center click-scale">
+                        <div className="text-3xl mb-2">💎</div>
+                        <div className="text-2xl font-orbitron font-bold text-slate-800">{points}</div>
+                        <div className="text-xs text-slate-400 font-bold uppercase tracking-wider">Total Points</div>
                     </div>
-                ) : (
-                    <div className="grid gap-6">
-                        {/* User Card */}
-                        <div className="bg-gradient-to-br from-blue-500/20 to-purple-500/20 backdrop-blur-md border border-blue-400/30 rounded-2xl p-8 flex flex-col md:flex-row items-center gap-6">
-                            <div className="w-24 h-24 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-4xl shadow-lg">
-                                👤
-                            </div>
-                            <div className="text-center md:text-left">
-                                <h2 className="text-xl font-mono text-white mb-2">{address}</h2>
-                                <div className="flex flex-wrap justify-center md:justify-start gap-3">
-                                    <span className="px-3 py-1 bg-blue-500/30 rounded-full text-blue-200 text-sm border border-blue-400/30">
-                                        Base Mainnet
-                                    </span>
-                                    <span className="px-3 py-1 bg-purple-500/30 rounded-full text-purple-200 text-sm border border-purple-400/30">
-                                        Player
-                                    </span>
-                                </div>
-                            </div>
+
+                    <div className="bg-white/80 backdrop-blur-sm border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col items-center justify-center click-scale">
+                        <div className="text-3xl mb-2">⚡</div>
+                        <div className="text-2xl font-orbitron font-bold text-slate-800">{level}</div>
+                        <div className="text-xs text-slate-400 font-bold uppercase tracking-wider">Current Level</div>
+                    </div>
+
+                    <div className="bg-white/80 backdrop-blur-sm border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col items-center justify-center col-span-2 click-scale">
+                        <div className="flex items-center gap-2 mb-1">
+                            <span className="text-3xl">🔥</span>
+                            <span className="text-2xl font-orbitron font-bold text-slate-800">{streak} Day Streak</span>
                         </div>
-
-                        {/* Stats Grid */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            {/* Points */}
-                            <div className="bg-black/30 backdrop-blur-sm border border-yellow-500/30 rounded-xl p-6 text-center transform hover:scale-105 transition-transform">
-                                <div className="text-4xl mb-2">💎</div>
-                                <div className="text-3xl font-orbitron font-bold text-yellow-400 mb-1">
-                                    {profile?.points?.toLocaleString() || 0}
-                                </div>
-                                <div className="text-yellow-200/70 text-sm uppercase tracking-wider">Total Points</div>
-                            </div>
-
-                            {/* Streak */}
-                            <div className="bg-black/30 backdrop-blur-sm border border-orange-500/30 rounded-xl p-6 text-center transform hover:scale-105 transition-transform">
-                                <div className="text-4xl mb-2">🔥</div>
-                                <div className="text-3xl font-orbitron font-bold text-orange-400 mb-1">
-                                    {profile?.streak || 0} Days
-                                </div>
-                                <div className="text-orange-200/70 text-sm uppercase tracking-wider">Current Streak</div>
-                            </div>
-
-                            {/* Level */}
-                            <div className="bg-black/30 backdrop-blur-sm border border-green-500/30 rounded-xl p-6 text-center transform hover:scale-105 transition-transform">
-                                <div className="text-4xl mb-2">🎮</div>
-                                <div className="text-3xl font-orbitron font-bold text-green-400 mb-1">
-                                    {profile?.level || 1}
-                                </div>
-                                <div className="text-green-200/70 text-sm uppercase tracking-wider">Current Level</div>
-                            </div>
-                        </div>
-
-                        {/* Recent Activity */}
-                        <div className="bg-black/20 backdrop-blur-sm border border-blue-400/20 rounded-2xl p-6">
-                            <h3 className="text-xl font-orbitron font-bold text-white mb-4 flex items-center gap-2">
-                                📅 Recent Activity
-                            </h3>
-                            <div className="space-y-3">
-                                {profile?.last_check_in ? (
-                                    <div className="flex items-center justify-between bg-white/5 p-4 rounded-lg border border-white/10">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 bg-green-500/20 rounded-full flex items-center justify-center text-xl">
-                                                ✅
-                                            </div>
-                                            <div>
-                                                <div className="text-white font-bold">Daily Check-In</div>
-                                                <div className="text-xs text-gray-400">Streak maintained!</div>
-                                            </div>
-                                        </div>
-                                        <div className="text-sm text-blue-300">
-                                            {new Date(profile.last_check_in).toLocaleDateString()}
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="text-center text-gray-400 py-4">No recent activity</div>
-                                )}
-                            </div>
+                        <div className="text-xs text-slate-400 font-bold uppercase tracking-wider">
+                            {lastCheckIn ? `Last check-in: ${new Date(lastCheckIn).toLocaleDateString()}` : 'No check-ins yet'}
                         </div>
                     </div>
-                )}
+                </div>
+
+                {/* Recent Activity (Placeholder) */}
+                <div className="w-full">
+                    <h3 className="text-lg font-orbitron font-bold text-slate-700 mb-4 px-2">Recent Activity</h3>
+                    <div className="bg-white/60 backdrop-blur-sm border border-slate-200 rounded-2xl p-4 text-center text-slate-400 text-sm">
+                        No recent game activity
+                    </div>
+                </div>
+
             </div>
-        </div>
+        </main>
     );
 }
