@@ -1,12 +1,11 @@
 'use client';
 
 import { useAccount, useConnect, useDisconnect } from 'wagmi';
-import { base } from 'wagmi/chains';
-import { useEffect } from 'react';
+import { config } from '@/providers/Web3Provider';
 
 export default function WalletConnectClient() {
-    const { address, isConnected, chain } = useAccount();
-    const { connect, connectors } = useConnect();
+    const { address, isConnected } = useAccount();
+    const { connect } = useConnect();
     const { disconnect } = useDisconnect();
 
     const formatAddress = (addr: string) => {
@@ -14,13 +13,8 @@ export default function WalletConnectClient() {
     };
 
     const handleConnect = () => {
-        // Find the Farcaster connector
-        const farcasterConnector = connectors.find(c => c.id === 'farcasterFrame');
-        if (farcasterConnector) {
-            connect({ connector: farcasterConnector });
-        } else if (connectors.length > 0) {
-            connect({ connector: connectors[0] });
-        }
+        // Connect using the Farcaster frame connector
+        connect({ connector: config.connectors[0] });
     };
 
     return (
