@@ -21,6 +21,30 @@ export const metadata: Metadata = {
         title: "Bubble Shot - Crypto Bubble Shooter Game",
         description: "Play and earn DEGEN rewards in this crypto-themed bubble shooter!",
         type: "website",
+        images: [
+            {
+                url: "https://bubble-shoot-1.vercel.app/images/og-image.png",
+                width: 1200,
+                height: 800,
+                alt: "Bubble Shot Game",
+            },
+        ],
+    },
+    other: {
+        "fc:frame": JSON.stringify({
+            version: "1",
+            imageUrl: "https://bubble-shoot-1.vercel.app/images/og-image.png",
+            button: {
+                title: "Play Now",
+                action: {
+                    type: "launch_miniapp",
+                    name: "Bubble Shot",
+                    url: "https://bubble-shoot-1.vercel.app",
+                    splashImageUrl: "https://bubble-shoot-1.vercel.app/images/splash.png",
+                    splashBackgroundColor: "#1a1a2e",
+                },
+            },
+        }),
     },
 };
 
