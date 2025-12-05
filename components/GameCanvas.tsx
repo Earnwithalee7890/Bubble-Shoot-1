@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import Phaser from "phaser";
+import { generateLevel, LevelData } from "@/lib/LevelGenerator";
 
 interface GameCanvasProps {
     level: number;
@@ -29,6 +30,7 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
             private arrow: Phaser.GameObjects.Graphics | null = null;
             private bulletCleanupTimer: Phaser.Time.TimerEvent | null = null;
             private isSnapping: boolean = false;
+            private levelData: LevelData | null = null;
 
             // Mobile Portrait Settings
             private readonly GAME_WIDTH = 360;
@@ -36,7 +38,6 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
             private readonly BUBBLE_RADIUS = 20;
             private readonly GRID_ROWS = 14;
             private readonly GRID_COLS = 8;
-            private readonly COLORS = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff, 0x00ffff];
 
             private score = 0;
             private scoreText: Phaser.GameObjects.Text | null = null;
@@ -48,48 +49,29 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
             }
 
             preload() {
-                const graphics = this.make.graphics({ x: 0, y: 0 });
-
-                this.COLORS.forEach((color, index) => {
-                    graphics.clear();
-
-                    // Different designs based on level
-                    if (level % 3 === 1) {
-                        // Design 1: Glossy (Standard)
-                        graphics.fillStyle(color, 1);
-                        graphics.fillCircle(this.BUBBLE_RADIUS, this.BUBBLE_RADIUS, this.BUBBLE_RADIUS);
-                        graphics.fillStyle(0x000000, 0.2);
-                        graphics.fillCircle(this.BUBBLE_RADIUS, this.BUBBLE_RADIUS + 2, this.BUBBLE_RADIUS - 2);
-                        graphics.fillStyle(0xffffff, 0.6);
-                        graphics.fillCircle(this.BUBBLE_RADIUS - 6, this.BUBBLE_RADIUS - 6, 6);
-                    } else if (level % 3 === 2) {
-                        // Design 2: Matte / Solid with Ring
-                        graphics.fillStyle(color, 1);
-                        graphics.fillCircle(this.BUBBLE_RADIUS, this.BUBBLE_RADIUS, this.BUBBLE_RADIUS);
-                        graphics.lineStyle(2, 0xffffff, 0.5);
-                        graphics.strokeCircle(this.BUBBLE_RADIUS, this.BUBBLE_RADIUS, this.BUBBLE_RADIUS - 2);
-                    } else {
-                        // Design 3: Neon / Metallic
-                        graphics.fillStyle(color, 0.8);
-                        graphics.fillCircle(this.BUBBLE_RADIUS, this.BUBBLE_RADIUS, this.BUBBLE_RADIUS);
-                        graphics.fillStyle(0xffffff, 0.8);
-                        graphics.fillCircle(this.BUBBLE_RADIUS, this.BUBBLE_RADIUS, 5); // Center dot
-                        graphics.lineStyle(2, color, 1);
-                        graphics.strokeCircle(this.BUBBLE_RADIUS, this.BUBBLE_RADIUS, this.BUBBLE_RADIUS);
-                    }
-
-                    graphics.generateTexture(`bubble_${index}`, this.BUBBLE_RADIUS * 2, this.BUBBLE_RADIUS * 2);
-                });
+                // Preload logic moved to create() to use dynamic level data
             }
 
             create() {
-                // Dynamic Background based on level
-                const bgColors = [0x1e293b, 0x2e1065, 0x172554, 0x312e81, 0x4c1d95];
-                const bgColor = bgColors[(level - 1) % bgColors.length];
+                // 1. Generate Level Data
+                this.levelData = generateLevel(level);
 
+                // 2. Dynamic Background
+                const bgColors = [0x12002b, 0x1a0b2e, 0x0f1724, 0x1b0633];
+                const bgColor = bgColors[(level - 1) % bgColors.length];
                 this.add.rectangle(this.GAME_WIDTH / 2, this.GAME_HEIGHT / 2, this.GAME_WIDTH, this.GAME_HEIGHT, bgColor);
+
+                // Add subtle gradient overlay
+                const graphics = this.make.graphics({ x: 0, y: 0 });
+                graphics.fillGradientStyle(0xffffff, 0xffffff, 0x000000, 0x000000, 0.05, 0.05, 0.2, 0.2);
+                graphics.fillRect(0, 0, this.GAME_WIDTH, this.GAME_HEIGHT);
+
                 this.physics.world.setBounds(0, 0, this.GAME_WIDTH, this.GAME_HEIGHT);
 
+                // 3. Generate Textures for this Level's Palette
+                this.generateTextures(this.levelData.colors);
+
+                // 4. Create Grid
                 this.createGrid();
                 this.createShooter();
 
@@ -97,6 +79,7 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                 this.input.on('pointermove', this.handlePointerMove, this);
                 this.input.on('pointerup', this.handlePointerUp, this);
 
+                // UI
                 this.scoreText = this.add.text(10, 10, `Score: ${this.score}`, {
                     fontSize: '20px',
                     color: '#ffffff',
@@ -109,7 +92,51 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                     fontFamily: 'Inter'
                 }).setOrigin(0.5).setAlpha(0.5);
 
+                this.add.text(this.GAME_WIDTH - 10, 10, this.levelData.meta.pattern.replace('-', ' ').toUpperCase(), {
+                    fontSize: '10px',
+                    color: '#ffffff',
+                    fontFamily: 'Orbitron',
+                    align: 'right'
+                }).setOrigin(1, 0).setAlpha(0.7);
+
                 this.arrow = this.add.graphics();
+            }
+
+            private generateTextures(colors: string[]) {
+                const graphics = this.make.graphics({ x: 0, y: 0 });
+
+                colors.forEach((colorHex, index) => {
+                    const color = parseInt(colorHex.replace('#', '0x'));
+                    const key = `bubble_${colorHex}`;
+
+                    if (this.textures.exists(key)) return;
+
+                    graphics.clear();
+
+                    // High Quality Bubble Render (matching snippet style)
+
+                    // 1. Base Gradient (Simulated with circles)
+                    graphics.fillStyle(color, 1);
+                    graphics.fillCircle(this.BUBBLE_RADIUS, this.BUBBLE_RADIUS, this.BUBBLE_RADIUS);
+
+                    // 2. Darker shading (bottom right)
+                    graphics.fillStyle(0x000000, 0.2);
+                    graphics.fillCircle(this.BUBBLE_RADIUS + 2, this.BUBBLE_RADIUS + 4, this.BUBBLE_RADIUS - 2);
+
+                    // 3. Inner Gradient / Highlight (top left)
+                    graphics.fillStyle(0xffffff, 0.25);
+                    graphics.fillCircle(this.BUBBLE_RADIUS - 5, this.BUBBLE_RADIUS - 5, this.BUBBLE_RADIUS * 0.6);
+
+                    // 4. Specular Highlight (sharp white dot)
+                    graphics.fillStyle(0xffffff, 0.9);
+                    graphics.fillCircle(this.BUBBLE_RADIUS - 8, this.BUBBLE_RADIUS - 8, 4);
+
+                    // 5. Rim Light (subtle stroke)
+                    graphics.lineStyle(2, 0xffffff, 0.15);
+                    graphics.strokeCircle(this.BUBBLE_RADIUS, this.BUBBLE_RADIUS, this.BUBBLE_RADIUS - 1);
+
+                    graphics.generateTexture(key, this.BUBBLE_RADIUS * 2, this.BUBBLE_RADIUS * 2);
+                });
             }
 
             private handlePointerDown(pointer: Phaser.Input.Pointer) {
@@ -145,11 +172,9 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
             }
 
             private wallHitEffect(x: number, y: number) {
-                // Glitch / Shake effect
-                this.cameras.main.shake(100, 0.01);
-
-                // Particle burst
-                const particles = this.add.particles(x, y, `bubble_${this.bullet?.getData('color') || 0}`, {
+                this.cameras.main.shake(100, 0.005);
+                const color = this.bullet?.getData('color') || '#ffffff';
+                const particles = this.add.particles(x, y, `bubble_${color}`, {
                     speed: { min: 50, max: 150 },
                     scale: { start: 0.2, end: 0 },
                     lifespan: 300,
@@ -168,7 +193,7 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                         return;
                     }
 
-                    // Wall bounce with Glitch Effect
+                    // Wall bounce
                     if (this.bullet.x <= this.BUBBLE_RADIUS) {
                         this.bullet.setVelocityX(Math.abs(velocity.x));
                         this.wallHitEffect(this.bullet.x, this.bullet.y);
@@ -182,6 +207,7 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                         return;
                     }
 
+                    // Collision check
                     for (let r = 0; r < this.GRID_ROWS; r++) {
                         for (let c = 0; c < this.bubbles[r].length; c++) {
                             const bubble = this.bubbles[r][c];
@@ -199,37 +225,57 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
 
             private createGrid() {
                 this.bubbles = Array(this.GRID_ROWS).fill(null).map(() => Array(this.GRID_COLS).fill(null));
-                const rowsToFill = Math.min(5 + Math.floor(level / 2), this.GRID_ROWS - 5);
+
+                if (!this.levelData) return;
+
                 const gridWidth = this.GRID_COLS * this.BUBBLE_RADIUS * 2;
                 const gridStartX = (this.GAME_WIDTH - gridWidth) / 2 + this.BUBBLE_RADIUS;
 
-                for (let r = 0; r < rowsToFill; r++) {
-                    const cols = r % 2 === 0 ? this.GRID_COLS : this.GRID_COLS - 1;
-                    const offsetX = r % 2 === 0 ? 0 : this.BUBBLE_RADIUS;
+                this.levelData.grid.forEach(cell => {
+                    if (cell.r >= this.GRID_ROWS || cell.c >= this.GRID_COLS) return;
 
-                    for (let c = 0; c < cols; c++) {
-                        const colorIdx = Phaser.Math.Between(0, this.COLORS.length - 1);
-                        const x = gridStartX + offsetX + c * (this.BUBBLE_RADIUS * 2);
-                        const y = this.BUBBLE_RADIUS + r * (this.BUBBLE_RADIUS * Math.sqrt(3));
+                    const rowHeight = this.BUBBLE_RADIUS * Math.sqrt(3);
+                    const offsetX = cell.isOdd ? this.BUBBLE_RADIUS : 0;
 
-                        const bubble = this.add.sprite(x, y, `bubble_${colorIdx}`);
-                        bubble.setData('color', colorIdx);
-                        this.bubbles[r][c] = bubble;
+                    const x = gridStartX + offsetX + cell.c * (this.BUBBLE_RADIUS * 2);
+                    const y = this.BUBBLE_RADIUS + cell.r * rowHeight;
+
+                    const bubble = this.add.sprite(x, y, `bubble_${cell.color}`);
+                    bubble.setData('color', cell.color);
+
+                    // Add special icon if needed
+                    if (cell.special) {
+                        let icon = '';
+                        if (cell.special === 'bomb') icon = '💣';
+                        else if (cell.special === 'locked') icon = '🔒';
+                        else if (cell.special === 'rainbow') icon = '🌈';
+                        else if (cell.special === 'ice') icon = '❄️';
+
+                        if (icon) {
+                            const text = this.add.text(x, y, icon, { fontSize: '20px' }).setOrigin(0.5);
+                            bubble.setData('icon', text);
+                        }
                     }
-                }
+
+                    this.bubbles[cell.r][cell.c] = bubble;
+                });
             }
 
             private createShooter() {
                 const centerX = this.GAME_WIDTH / 2;
                 const bottomY = this.GAME_HEIGHT - 50;
 
-                const colorIdx = Phaser.Math.Between(0, this.COLORS.length - 1);
-                this.shooter = this.add.sprite(centerX, bottomY, `bubble_${colorIdx}`);
-                this.shooter.setData('color', colorIdx);
+                // Get available colors from grid
+                const availableColors = this.getAvailableColors();
+                if (availableColors.length === 0) return; // Level cleared
 
-                const nextColorIdx = Phaser.Math.Between(0, this.COLORS.length - 1);
-                this.nextBubble = this.add.sprite(centerX + 60, bottomY, `bubble_${nextColorIdx}`);
-                this.nextBubble.setData('color', nextColorIdx);
+                const color = availableColors[Phaser.Math.Between(0, availableColors.length - 1)];
+                this.shooter = this.add.sprite(centerX, bottomY, `bubble_${color}`);
+                this.shooter.setData('color', color);
+
+                const nextColor = availableColors[Phaser.Math.Between(0, availableColors.length - 1)];
+                this.nextBubble = this.add.sprite(centerX + 60, bottomY, `bubble_${nextColor}`);
+                this.nextBubble.setData('color', nextColor);
                 this.nextBubble.setScale(0.8);
                 this.add.text(centerX + 45, bottomY + 25, 'NEXT', { fontSize: '10px', fontFamily: 'Orbitron', color: '#94a3b8' });
             }
@@ -243,7 +289,7 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                 this.bullet.setCollideWorldBounds(true);
                 this.bullet.setBounce(1, 1);
 
-                const speed = 1000;
+                const speed = 1200;
                 this.bullet.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
 
                 this.shooter.setVisible(false);
@@ -293,23 +339,25 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                 if (c < 0) c = 0;
                 if (c >= maxCols) c = maxCols - 1;
 
-                // FIX: Check if position is already occupied
+                // Check occupancy and find nearest empty
                 if (this.bubbles[r][c]) {
-                    // Find nearest empty position
                     let found = false;
-                    for (let dr = -1; dr <= 1 && !found; dr++) {
-                        for (let dc = -1; dc <= 1 && !found; dc++) {
-                            const nr = r + dr;
-                            const nc = c + dc;
-                            const nMaxCols = nr % 2 === 0 ? this.GRID_COLS : this.GRID_COLS - 1;
-                            if (nr >= 0 && nr < this.GRID_ROWS && nc >= 0 && nc < nMaxCols && !this.bubbles[nr][nc]) {
-                                r = nr;
-                                c = nc;
-                                found = true;
-                            }
+                    // Spiral search for nearest empty
+                    const offsets = [[0, 0], [-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [-1, 1], [1, -1], [1, 1]];
+
+                    for (const [dr, dc] of offsets) {
+                        const nr = r + dr;
+                        const nc = c + dc;
+                        const nMaxCols = nr % 2 === 0 ? this.GRID_COLS : this.GRID_COLS - 1;
+
+                        if (nr >= 0 && nr < this.GRID_ROWS && nc >= 0 && nc < nMaxCols && !this.bubbles[nr][nc]) {
+                            r = nr;
+                            c = nc;
+                            found = true;
+                            break;
                         }
                     }
-                    // If no empty position found, just cleanup and return
+
                     if (!found) {
                         this.cleanupBullet();
                         this.isSnapping = false;
@@ -333,8 +381,8 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                 this.resetShooter();
             }
 
-            private getAvailableColors(): number[] {
-                const colorsInGrid = new Set<number>();
+            private getAvailableColors(): string[] {
+                const colorsInGrid = new Set<string>();
                 for (let r = 0; r < this.GRID_ROWS; r++) {
                     for (let c = 0; c < this.bubbles[r].length; c++) {
                         const bubble = this.bubbles[r][c];
@@ -343,10 +391,10 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                         }
                     }
                 }
-                return colorsInGrid.size > 0 ? Array.from(colorsInGrid) : [0, 1, 2, 3, 4, 5];
+                return Array.from(colorsInGrid);
             }
 
-            private checkMatches(startR: number, startC: number, color: number) {
+            private checkMatches(startR: number, startC: number, color: string) {
                 const visited = new Set<string>();
                 const matches: { r: number, c: number }[] = [];
                 const queue: { r: number, c: number }[] = [{ r: startR, c: startC }];
@@ -375,11 +423,15 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                     matches.forEach(m => {
                         const bubble = this.bubbles[m.r][m.c];
                         if (bubble) {
+                            // Pop animation
                             this.tweens.add({
                                 targets: bubble,
-                                scale: 0,
-                                duration: 200,
+                                scale: 1.2,
+                                alpha: 0,
+                                duration: 150,
                                 onComplete: () => {
+                                    const icon = bubble.getData('icon');
+                                    if (icon) icon.destroy();
                                     bubble.destroy();
                                 }
                             });
@@ -389,10 +441,14 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
 
                     this.score += matches.length * 10;
                     if (this.scoreText) this.scoreText.setText(`Score: ${this.score}`);
-                    this.removeOrphans();
-                    if (this.isLevelClear()) {
-                        onLevelCompleteRef.current(this.score);
-                    }
+
+                    // Small delay before removing orphans to let pop animation play
+                    this.time.delayedCall(100, () => {
+                        this.removeOrphans();
+                        if (this.isLevelClear()) {
+                            onLevelCompleteRef.current(this.score);
+                        }
+                    });
                 }
             }
 
@@ -446,12 +502,18 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                         if (this.bubbles[r][c] && !connected.has(`${r},${c}`)) {
                             const bubble = this.bubbles[r][c];
                             if (bubble) {
+                                // Drop animation
                                 this.tweens.add({
                                     targets: bubble,
-                                    y: this.GAME_HEIGHT,
-                                    alpha: 0,
-                                    duration: 500,
-                                    onComplete: () => bubble.destroy()
+                                    y: this.GAME_HEIGHT + 50,
+                                    angle: Phaser.Math.Between(-180, 180),
+                                    duration: 800,
+                                    ease: 'Quad.easeIn',
+                                    onComplete: () => {
+                                        const icon = bubble.getData('icon');
+                                        if (icon) icon.destroy();
+                                        bubble.destroy();
+                                    }
                                 });
                                 this.bubbles[r][c] = null;
                                 this.score += 20;
@@ -480,12 +542,14 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                 this.shooter.setData('color', nextColor);
                 this.shooter.setVisible(true);
 
-                // FIX: Only generate colors that exist in the grid
                 const availableColors = this.getAvailableColors();
-                const randomIndex = Phaser.Math.Between(0, availableColors.length - 1);
-                const newColor = availableColors[randomIndex];
-                this.nextBubble.setTexture(`bubble_${newColor}`);
-                this.nextBubble.setData('color', newColor);
+                if (availableColors.length > 0) {
+                    const newColor = availableColors[Phaser.Math.Between(0, availableColors.length - 1)];
+                    this.nextBubble.setTexture(`bubble_${newColor}`);
+                    this.nextBubble.setData('color', newColor);
+                } else {
+                    this.nextBubble.setVisible(false);
+                }
 
                 this.isShooting = false;
             }
@@ -502,7 +566,7 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                 width: 360,
                 height: 640,
             },
-            backgroundColor: '#1e293b', // Default fallback
+            backgroundColor: '#12002b',
             physics: {
                 default: 'arcade',
                 arcade: {
