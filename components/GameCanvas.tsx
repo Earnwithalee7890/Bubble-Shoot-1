@@ -524,8 +524,10 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                 for (let r = 0; r < this.GRID_ROWS; r++) {
                     for (let c = 0; c < this.bubbles[r].length; c++) {
                         const bubble = this.bubbles[r][c];
-                        if (bubble) {
-                            colorsInGrid.add(bubble.getData('color'));
+                        // Only count bubbles that exist and are visible
+                        if (bubble && bubble.visible && bubble.active) {
+                            const color = bubble.getData('color');
+                            if (color) colorsInGrid.add(color);
                         }
                     }
                 }
@@ -675,19 +677,38 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                 if (!this.shooter || !this.nextBubble) return;
                 this.cleanupBullet();
 
+                // Get currently available colors in the grid
+                const availableColors = this.getAvailableColors();
+
+                // If no colors left, level is complete
+                if (availableColors.length === 0) {
+                    this.shooter.setVisible(false);
+                    this.nextBubble.setVisible(false);
+                    this.isShooting = false;
+                    return;
+                }
+
+                // Check if the next bubble's color is still available in the grid
                 const nextColor = this.nextBubble.getData('color');
-                this.shooter.setTexture(`bubble_${nextColor}`);
-                this.shooter.setData('color', nextColor);
+
+                if (availableColors.includes(nextColor)) {
+                    // Color still exists in grid, use it
+                    this.shooter.setTexture(`bubble_${nextColor}`);
+                    this.shooter.setData('color', nextColor);
+                } else {
+                    // Color no longer exists, pick a new valid color
+                    const validColor = availableColors[Phaser.Math.Between(0, availableColors.length - 1)];
+                    this.shooter.setTexture(`bubble_${validColor}`);
+                    this.shooter.setData('color', validColor);
+                }
+
                 this.shooter.setVisible(true);
 
-                const availableColors = this.getAvailableColors();
-                if (availableColors.length > 0) {
-                    const newColor = availableColors[Phaser.Math.Between(0, availableColors.length - 1)];
-                    this.nextBubble.setTexture(`bubble_${newColor}`);
-                    this.nextBubble.setData('color', newColor);
-                } else {
-                    this.nextBubble.setVisible(false);
-                }
+                // Set next bubble to a color that exists in the grid
+                const newNextColor = availableColors[Phaser.Math.Between(0, availableColors.length - 1)];
+                this.nextBubble.setTexture(`bubble_${newNextColor}`);
+                this.nextBubble.setData('color', newNextColor);
+                this.nextBubble.setVisible(true);
 
                 this.isShooting = false;
             }
