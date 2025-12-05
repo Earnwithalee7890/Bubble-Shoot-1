@@ -12,11 +12,20 @@ interface Activity {
     timestamp: number;
 }
 
+interface Achievement {
+    id: string;
+    icon: string;
+    name: string;
+    description: string;
+    unlocked: boolean;
+}
+
 export default function ProfilePage() {
     const { address, isConnected } = useAccount();
     const { user } = useFarcaster();
     const { streak, lastCheckIn, maxLevel, totalPoints } = useCheckIn();
     const [activities, setActivities] = useState<Activity[]>([]);
+    const [achievements, setAchievements] = useState<Achievement[]>([]);
 
     useEffect(() => {
         // Load recent activities from localStorage
@@ -55,6 +64,18 @@ export default function ProfilePage() {
                 setActivities(initialActivities);
             }
         }
+
+        // Generate achievements
+        setAchievements([
+            { id: 'first_shot', icon: '🎯', name: 'First Shot', description: 'Complete your first level', unlocked: maxLevel >= 1 },
+            { id: 'streak_3', icon: '🔥', name: '3 Day Streak', description: 'Check in 3 days in a row', unlocked: streak >= 3 },
+            { id: 'streak_7', icon: '⚡', name: '7 Day Streak', description: 'Check in 7 days in a row', unlocked: streak >= 7 },
+            { id: 'level_5', icon: '⭐', name: 'Rising Star', description: 'Reach Level 5', unlocked: maxLevel >= 5 },
+            { id: 'level_10', icon: '💎', name: 'Diamond Player', description: 'Reach Level 10', unlocked: maxLevel >= 10 },
+            { id: 'level_25', icon: '🏅', name: 'Expert', description: 'Reach Level 25', unlocked: maxLevel >= 25 },
+            { id: 'level_50', icon: '🏆', name: 'Champion', description: 'Reach Level 50', unlocked: maxLevel >= 50 },
+            { id: 'level_100', icon: '👑', name: 'Legend', description: 'Reach Level 100', unlocked: maxLevel >= 100 },
+        ]);
     }, [address, lastCheckIn, maxLevel, streak]);
 
     const formatAddress = (addr: string) => {
@@ -77,6 +98,8 @@ export default function ProfilePage() {
             default: return '📋';
         }
     };
+
+    const unlockedCount = achievements.filter(a => a.unlocked).length;
 
     return (
         <div className="min-h-screen bg-slate-50 relative overflow-hidden cyber-grid flex flex-col">
@@ -153,6 +176,38 @@ export default function ProfilePage() {
                         <div className="text-xs text-slate-400 font-bold uppercase tracking-wider">
                             {lastCheckIn ? `Last check-in: ${new Date(lastCheckIn).toLocaleDateString()}` : 'No check-ins yet'}
                         </div>
+                    </div>
+                </div>
+
+                {/* Achievements Section */}
+                <div className="w-full mb-6">
+                    <div className="flex items-center justify-between mb-4 px-2">
+                        <h3 className="text-lg font-orbitron font-bold text-slate-700">Achievements</h3>
+                        <span className="text-sm text-slate-400 font-medium">{unlockedCount}/{achievements.length}</span>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2">
+                        {achievements.map((achievement) => (
+                            <div
+                                key={achievement.id}
+                                className={`relative flex flex-col items-center p-3 rounded-xl transition-all ${achievement.unlocked
+                                        ? 'bg-gradient-to-br from-yellow-50 to-orange-50 border-2 border-yellow-200 shadow-sm'
+                                        : 'bg-slate-100 border border-slate-200 opacity-50'
+                                    }`}
+                                title={`${achievement.name}: ${achievement.description}`}
+                            >
+                                <div className={`text-2xl mb-1 ${achievement.unlocked ? '' : 'grayscale'}`}>
+                                    {achievement.icon}
+                                </div>
+                                <div className="text-[10px] text-center text-slate-600 font-medium leading-tight">
+                                    {achievement.name}
+                                </div>
+                                {achievement.unlocked && (
+                                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center">
+                                        <span className="text-white text-[8px]">✓</span>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
                     </div>
                 </div>
 
