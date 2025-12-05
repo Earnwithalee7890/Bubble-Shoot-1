@@ -7,11 +7,11 @@
     "frame": {
         "version": "1",
         "name": "Bubble Shot",
-        "iconUrl": "https://bubble-shoot-1.vercel.app/images/icon.svg",
+        "iconUrl": "https://bubble-shoot-1.vercel.app/images/icon.png",
         "homeUrl": "https://bubble-shoot-1.vercel.app",
-        "imageUrl": "https://bubble-shoot-1.vercel.app/images/og-image.svg",
+        "imageUrl": "https://bubble-shoot-1.vercel.app/images/og-image.png",
         "buttonTitle": "Play Now",
-        "splashImageUrl": "https://bubble-shoot-1.vercel.app/images/splash.svg",
+        "splashImageUrl": "https://bubble-shoot-1.vercel.app/images/splash.png",
         "splashBackgroundColor": "#1a1a2e",
         "webhookUrl": "https://bubble-shoot-1.vercel.app/api/webhook"
     }
