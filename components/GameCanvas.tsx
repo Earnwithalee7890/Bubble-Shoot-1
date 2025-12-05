@@ -726,15 +726,8 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
     }, [level]);
 
     return (
-        <div className="w-full h-full flex justify-center items-center p-2">
-            <div className="relative">
-                {/* Outer glow effect */}
-                <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 via-blue-500 to-cyan-500 rounded-xl opacity-50 blur-sm animate-pulse"></div>
-                {/* Game container with border */}
-                <div className="relative bg-slate-900 rounded-lg p-1 shadow-2xl">
-                    <div ref={containerRef} className="w-full h-full max-w-[360px] aspect-[9/16] rounded-md overflow-hidden" />
-                </div>
-            </div>
+        <div className="w-full h-full flex justify-center items-center">
+            <div ref={containerRef} className="w-full h-full max-w-[360px] aspect-[9/16]" />
         </div>
     );
 }
