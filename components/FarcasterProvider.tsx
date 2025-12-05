@@ -1,17 +1,30 @@
 "use client";
 
-import { useEffect, useState, createContext, useContext } from "react";
+import { useEffect, useState, createContext, useContext, useCallback } from "react";
+
+interface NotificationDetails {
+    token: string;
+    url: string;
+}
 
 interface FarcasterContextType {
     user: any | null;
     isReady: boolean;
     farcasterAddress: string | null;
+    isAppAdded: boolean;
+    notificationsEnabled: boolean;
+    addMiniApp: () => Promise<void>;
+    requestNotifications: () => Promise<void>;
 }
 
 const FarcasterContext = createContext<FarcasterContextType>({
     user: null,
     isReady: false,
     farcasterAddress: null,
+    isAppAdded: false,
+    notificationsEnabled: false,
+    addMiniApp: async () => { },
+    requestNotifications: async () => { },
 });
 
 export const useFarcaster = () => useContext(FarcasterContext);
@@ -20,22 +33,87 @@ export default function FarcasterProvider({ children }: { children: React.ReactN
     const [user, setUser] = useState<any | null>(null);
     const [isReady, setIsReady] = useState(false);
     const [farcasterAddress, setFarcasterAddress] = useState<string | null>(null);
+    const [isAppAdded, setIsAppAdded] = useState(false);
+    const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+    const [sdk, setSdk] = useState<any>(null);
+
+    // Add Mini App to user's app list
+    const addMiniApp = useCallback(async () => {
+        if (!sdk) return;
+        try {
+            const result = await sdk.default.actions.addFrame();
+            if (result?.added) {
+                setIsAppAdded(true);
+                console.log("Mini app added successfully!");
+
+                // Store notification details if provided
+                if (result.notificationDetails) {
+                    await saveNotificationToken(result.notificationDetails);
+                    setNotificationsEnabled(true);
+                }
+            }
+        } catch (err) {
+            console.error("Error adding mini app:", err);
+        }
+    }, [sdk]);
+
+    // Request notification permission
+    const requestNotifications = useCallback(async () => {
+        if (!sdk) return;
+        try {
+            const result = await sdk.default.actions.requestNotifications();
+            if (result?.success && result.notificationDetails) {
+                await saveNotificationToken(result.notificationDetails);
+                setNotificationsEnabled(true);
+                console.log("Notifications enabled successfully!");
+            }
+        } catch (err) {
+            console.error("Error requesting notifications:", err);
+        }
+    }, [sdk]);
+
+    // Save notification token to database
+    const saveNotificationToken = async (details: NotificationDetails) => {
+        if (!user?.fid) return;
+
+        try {
+            await fetch('/api/notifications/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    fid: user.fid,
+                    token: details.token,
+                    url: details.url,
+                }),
+            });
+        } catch (err) {
+            console.error("Error saving notification token:", err);
+        }
+    };
 
     useEffect(() => {
         const init = async () => {
             if (typeof window === 'undefined') return;
 
             try {
-                const sdk = await import('@farcaster/frame-sdk');
-                const context = await sdk.default.context;
+                const farcasterSdk = await import('@farcaster/frame-sdk');
+                setSdk(farcasterSdk);
+
+                const context = await farcasterSdk.default.context;
 
                 if (context?.user) {
                     setUser(context.user);
                     console.log("Farcaster user found:", context.user);
 
-                    // Debug: Log all keys to see structure
-                    console.log("Context keys:", Object.keys(context));
-                    console.log("User keys:", Object.keys(context.user));
+                    // Check if app is already added
+                    if (context.client?.added) {
+                        setIsAppAdded(true);
+                    }
+
+                    // Check if notifications are enabled
+                    if (context.client?.notificationDetails) {
+                        setNotificationsEnabled(true);
+                    }
 
                     let addr: string | null = null;
 
@@ -73,7 +151,7 @@ export default function FarcasterProvider({ children }: { children: React.ReactN
                     console.log("No Farcaster user in context");
                 }
 
-                await sdk.default.actions.ready();
+                await farcasterSdk.default.actions.ready();
                 setIsReady(true);
                 console.log("Farcaster SDK ready called");
             } catch (err) {
@@ -84,7 +162,15 @@ export default function FarcasterProvider({ children }: { children: React.ReactN
     }, []);
 
     return (
-        <FarcasterContext.Provider value={{ user, isReady, farcasterAddress }}>
+        <FarcasterContext.Provider value={{
+            user,
+            isReady,
+            farcasterAddress,
+            isAppAdded,
+            notificationsEnabled,
+            addMiniApp,
+            requestNotifications,
+        }}>
             {children}
         </FarcasterContext.Provider>
     );

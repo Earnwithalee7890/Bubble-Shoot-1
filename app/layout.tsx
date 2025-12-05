@@ -49,6 +49,7 @@ export const metadata: Metadata = {
 };
 
 import FarcasterProvider from "@/components/FarcasterProvider";
+import MiniAppPrompt from "@/components/MiniAppPrompt";
 
 export default function RootLayout({
     children,
@@ -61,6 +62,7 @@ export default function RootLayout({
                 <FarcasterProvider>
                     <Web3Provider>
                         {children}
+                        <MiniAppPrompt />
                     </Web3Provider>
                 </FarcasterProvider>
             </body>
