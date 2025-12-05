@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect, useCallback } from "react";
 import { useAccount } from "wagmi";
 import dynamic from 'next/dynamic';
+import { useCheckIn } from "@/hooks/useCheckIn";
 
 const GameCanvas = dynamic(() => import('@/components/GameCanvas'), {
     ssr: false,
@@ -12,7 +13,8 @@ const GameCanvas = dynamic(() => import('@/components/GameCanvas'), {
 
 export default function GamePage() {
     const router = useRouter();
-    const { isConnected } = useAccount();
+    const { address, isConnected } = useAccount();
+    const { updateMaxLevel } = useCheckIn();
     const [currentLevel, setCurrentLevel] = useState(1);
     const [score, setScore] = useState(0);
     const [isPaused, setIsPaused] = useState(false);
@@ -50,14 +52,68 @@ export default function GamePage() {
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     };
 
+    // Save activity to localStorage
+    const saveActivity = useCallback((type: 'level' | 'checkin' | 'streak', description: string) => {
+        if (!address) return;
+
+        const key = `activities_${address}`;
+        const existing = localStorage.getItem(key);
+        const activities = existing ? JSON.parse(existing) : [];
+
+        activities.unshift({
+            type,
+            description,
+            timestamp: Date.now()
+        });
+
+        // Keep only last 20 activities
+        localStorage.setItem(key, JSON.stringify(activities.slice(0, 20)));
+    }, [address]);
+
+    // Submit score to leaderboard
+    const submitScore = useCallback(async (newScore: number, newLevel: number) => {
+        if (!address) return;
+
+        try {
+            await fetch('/api/leaderboard', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    address,
+                    score: newScore,
+                    level: newLevel
+                })
+            });
+        } catch (error) {
+            console.error('Failed to submit score:', error);
+        }
+    }, [address]);
+
     const handleLevelComplete = useCallback((levelScore: number) => {
-        setScore(prevScore => prevScore + levelScore);
+        setScore(prevScore => {
+            const newScore = prevScore + levelScore;
+            return newScore;
+        });
+
         setCurrentLevel(prevLevel => {
             const nextLevel = prevLevel + 1;
-            if (typeof window !== 'undefined') localStorage.setItem('currentLevel', nextLevel.toString());
+
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('currentLevel', nextLevel.toString());
+            }
+
+            // Update max level in useCheckIn hook
+            updateMaxLevel(nextLevel);
+
+            // Save activity
+            saveActivity('level', `Completed Level ${prevLevel} with ${levelScore} points`);
+
+            // Submit to leaderboard
+            submitScore(score + levelScore, nextLevel);
+
             return nextLevel;
         });
-    }, []);
+    }, [updateMaxLevel, saveActivity, submitScore, score]);
 
     return (
         <div className="h-screen bg-slate-900 relative overflow-hidden flex flex-col">

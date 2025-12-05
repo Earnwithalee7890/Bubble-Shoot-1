@@ -7,11 +7,13 @@ import DailyCheckIn from "@/components/DailyCheckIn";
 import WalletModal from "@/components/WalletModal";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useCheckIn } from "@/hooks/useCheckIn";
 
 export default function Home() {
     const router = useRouter();
     const { address, isConnected } = useAccount();
     const [showWalletModal, setShowWalletModal] = useState(false);
+    const { streak, maxLevel, totalPoints } = useCheckIn();
 
     return (
         <main className="min-h-screen bg-slate-50 relative overflow-hidden cyber-grid">
@@ -104,15 +106,15 @@ export default function Home() {
                 {isConnected && (
                     <div className="grid grid-cols-3 gap-3 w-full max-w-sm">
                         <div className="bg-white/80 backdrop-blur-sm border border-slate-200 rounded-2xl p-4 text-center shadow-sm">
-                            <div className="text-2xl font-orbitron font-bold text-blue-500">1</div>
-                            <div className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">Level</div>
+                            <div className="text-2xl font-orbitron font-bold text-blue-500">{maxLevel}</div>
+                            <div className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">Lvls</div>
                         </div>
                         <div className="bg-white/80 backdrop-blur-sm border border-slate-200 rounded-2xl p-4 text-center shadow-sm">
-                            <div className="text-2xl font-orbitron font-bold text-purple-500">0</div>
+                            <div className="text-2xl font-orbitron font-bold text-purple-500">{streak}</div>
                             <div className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">Points</div>
                         </div>
                         <div className="bg-white/80 backdrop-blur-sm border border-slate-200 rounded-2xl p-4 text-center shadow-sm">
-                            <div className="text-2xl font-orbitron font-bold text-pink-500">0</div>
+                            <div className="text-2xl font-orbitron font-bold text-pink-500">{streak}</div>
                             <div className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">Streak</div>
                         </div>
                     </div>

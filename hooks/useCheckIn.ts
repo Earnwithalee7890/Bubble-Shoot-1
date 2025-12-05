@@ -10,6 +10,8 @@ export function useCheckIn() {
     const [streak, setStreak] = useState(0);
     const [isLoading, setIsLoading] = useState(false);
     const [useLocalStorage, setUseLocalStorage] = useState(false);
+    const [maxLevel, setMaxLevel] = useState(1);
+    const [totalPoints, setTotalPoints] = useState(0);
 
     // Helper to get UTC date string (YYYY-MM-DD)
     const getUTCDateString = (date: Date) => {
@@ -36,6 +38,10 @@ export function useCheckIn() {
                     setLastCheckIn(new Date(data.lastCheckIn).getTime());
                 }
                 setUseLocalStorage(false); // API worked, so don't use local storage
+
+                // Also load max level and points from API if available
+                if (data.maxLevel) setMaxLevel(data.maxLevel);
+                if (data.points) setTotalPoints(data.points);
             } catch (error) {
                 console.warn("API check failed, falling back to localStorage:", error);
                 setUseLocalStorage(true);
@@ -54,6 +60,8 @@ export function useCheckIn() {
                         setCanCheckIn(lastDateUTC !== todayUTC);
                         setStreak(parsed.streak || 0);
                         setLastCheckIn(parsed.lastCheckIn);
+                        setMaxLevel(parsed.maxLevel || 1);
+                        setTotalPoints(parsed.streak || 0); // Points = streak days
                     } catch (e) {
                         console.error("Error parsing local storage data", e);
                         setCanCheckIn(true);
@@ -63,6 +71,13 @@ export function useCheckIn() {
                     setCanCheckIn(true);
                     setStreak(0);
                 }
+            }
+
+            // Also load max level from game storage
+            const savedLevel = localStorage.getItem('currentLevel');
+            if (savedLevel) {
+                const level = parseInt(savedLevel);
+                if (level > 1) setMaxLevel(level);
             }
         };
 
@@ -141,11 +156,29 @@ export function useCheckIn() {
         }
     };
 
+    // Function to update max level when user completes a level
+    const updateMaxLevel = (newLevel: number) => {
+        if (newLevel > maxLevel) {
+            setMaxLevel(newLevel);
+            if (address) {
+                const localData = localStorage.getItem(`checkin_${address}`);
+                const parsed = localData ? JSON.parse(localData) : {};
+                localStorage.setItem(`checkin_${address}`, JSON.stringify({
+                    ...parsed,
+                    maxLevel: newLevel
+                }));
+            }
+        }
+    };
+
     return {
         checkIn,
         isLoading,
         canCheckIn,
         streak,
         lastCheckIn,
+        maxLevel,
+        totalPoints,
+        updateMaxLevel,
     };
 }

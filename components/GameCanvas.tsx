@@ -31,6 +31,7 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
             private bulletCleanupTimer: Phaser.Time.TimerEvent | null = null;
             private isSnapping: boolean = false;
             private levelData: LevelData | null = null;
+            private lastWallHitTime: number = 0; // Debounce wall hits
 
             // Mobile Portrait Settings
             private readonly GAME_WIDTH = 360;
@@ -56,15 +57,101 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                 // 1. Generate Level Data
                 this.levelData = generateLevel(level);
 
-                // 2. Dynamic Background
-                const bgColors = [0x12002b, 0x1a0b2e, 0x0f1724, 0x1b0633];
-                const bgColor = bgColors[(level - 1) % bgColors.length];
-                this.add.rectangle(this.GAME_WIDTH / 2, this.GAME_HEIGHT / 2, this.GAME_WIDTH, this.GAME_HEIGHT, bgColor);
+                // 2. Dynamic Background Themes based on level
+                const bgThemes = [
+                    { name: 'cosmic', primary: 0x12002b, secondary: 0x1a0b2e, accent: 0x8b5cf6, particles: 0xffffff },
+                    { name: 'ocean', primary: 0x0a1628, secondary: 0x0c2d48, accent: 0x0ea5e9, particles: 0x67e8f9 },
+                    { name: 'forest', primary: 0x0a1a0a, secondary: 0x1a2f1a, accent: 0x22c55e, particles: 0x86efac },
+                    { name: 'volcanic', primary: 0x1a0a0a, secondary: 0x2d1a0a, accent: 0xf97316, particles: 0xfed7aa },
+                    { name: 'cyber', primary: 0x0f172a, secondary: 0x1e293b, accent: 0xec4899, particles: 0xf9a8d4 },
+                    { name: 'aurora', primary: 0x0a0a1a, secondary: 0x1a1a2d, accent: 0x06b6d4, particles: 0xa5f3fc },
+                ];
+                const theme = bgThemes[(level - 1) % bgThemes.length];
 
-                // Add subtle gradient overlay
-                const graphics = this.make.graphics({ x: 0, y: 0 });
-                graphics.fillGradientStyle(0xffffff, 0xffffff, 0x000000, 0x000000, 0.05, 0.05, 0.2, 0.2);
-                graphics.fillRect(0, 0, this.GAME_WIDTH, this.GAME_HEIGHT);
+                // Create gradient background
+                const bgGraphics = this.add.graphics();
+                bgGraphics.fillGradientStyle(theme.primary, theme.primary, theme.secondary, theme.secondary, 1, 1, 1, 1);
+                bgGraphics.fillRect(0, 0, this.GAME_WIDTH, this.GAME_HEIGHT);
+
+                // Add animated stars/particles in background
+                for (let i = 0; i < 30; i++) {
+                    const star = this.add.circle(
+                        Phaser.Math.Between(10, this.GAME_WIDTH - 10),
+                        Phaser.Math.Between(10, this.GAME_HEIGHT - 10),
+                        Phaser.Math.Between(1, 3),
+                        theme.particles,
+                        Phaser.Math.FloatBetween(0.2, 0.6)
+                    );
+                    this.tweens.add({
+                        targets: star,
+                        alpha: { from: star.alpha, to: star.alpha * 0.3 },
+                        duration: Phaser.Math.Between(1000, 3000),
+                        yoyo: true,
+                        repeat: -1,
+                        ease: 'Sine.easeInOut'
+                    });
+                }
+
+                // 3. Add decorative game border
+                const borderGraphics = this.add.graphics();
+
+                // Outer glow border
+                borderGraphics.lineStyle(6, theme.accent, 0.3);
+                borderGraphics.strokeRect(2, 2, this.GAME_WIDTH - 4, this.GAME_HEIGHT - 4);
+
+                // Main border
+                borderGraphics.lineStyle(3, theme.accent, 0.8);
+                borderGraphics.strokeRect(4, 4, this.GAME_WIDTH - 8, this.GAME_HEIGHT - 8);
+
+                // Inner highlight
+                borderGraphics.lineStyle(1, 0xffffff, 0.2);
+                borderGraphics.strokeRect(6, 6, this.GAME_WIDTH - 12, this.GAME_HEIGHT - 12);
+
+                // Corner decorations
+                const cornerSize = 20;
+                const corners = [
+                    { x: 8, y: 8 }, // top-left
+                    { x: this.GAME_WIDTH - 8, y: 8 }, // top-right  
+                    { x: 8, y: this.GAME_HEIGHT - 8 }, // bottom-left
+                    { x: this.GAME_WIDTH - 8, y: this.GAME_HEIGHT - 8 } // bottom-right
+                ];
+
+                corners.forEach((corner, i) => {
+                    const cornerGraphic = this.add.graphics();
+                    cornerGraphic.lineStyle(2, theme.accent, 1);
+
+                    if (i === 0) { // top-left
+                        cornerGraphic.moveTo(corner.x, corner.y + cornerSize);
+                        cornerGraphic.lineTo(corner.x, corner.y);
+                        cornerGraphic.lineTo(corner.x + cornerSize, corner.y);
+                    } else if (i === 1) { // top-right
+                        cornerGraphic.moveTo(corner.x - cornerSize, corner.y);
+                        cornerGraphic.lineTo(corner.x, corner.y);
+                        cornerGraphic.lineTo(corner.x, corner.y + cornerSize);
+                    } else if (i === 2) { // bottom-left
+                        cornerGraphic.moveTo(corner.x, corner.y - cornerSize);
+                        cornerGraphic.lineTo(corner.x, corner.y);
+                        cornerGraphic.lineTo(corner.x + cornerSize, corner.y);
+                    } else { // bottom-right
+                        cornerGraphic.moveTo(corner.x - cornerSize, corner.y);
+                        cornerGraphic.lineTo(corner.x, corner.y);
+                        cornerGraphic.lineTo(corner.x, corner.y - cornerSize);
+                    }
+                    cornerGraphic.strokePath();
+                });
+
+                // Add subtle grid lines overlay
+                const gridGraphics = this.add.graphics();
+                gridGraphics.lineStyle(1, theme.accent, 0.05);
+                for (let x = 0; x < this.GAME_WIDTH; x += 40) {
+                    gridGraphics.moveTo(x, 0);
+                    gridGraphics.lineTo(x, this.GAME_HEIGHT);
+                }
+                for (let y = 0; y < this.GAME_HEIGHT; y += 40) {
+                    gridGraphics.moveTo(0, y);
+                    gridGraphics.lineTo(this.GAME_WIDTH, y);
+                }
+                gridGraphics.strokePath();
 
                 this.physics.world.setBounds(0, 0, this.GAME_WIDTH, this.GAME_HEIGHT);
 
@@ -172,48 +259,68 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
             }
 
             private wallHitEffect(x: number, y: number) {
-                this.cameras.main.shake(100, 0.005);
+                // Debounce wall hits to prevent multiple effects
+                const now = Date.now();
+                if (now - this.lastWallHitTime < 100) return;
+                this.lastWallHitTime = now;
+
+                this.cameras.main.shake(80, 0.003);
                 const color = this.bullet?.getData('color') || '#ffffff';
-                const particles = this.add.particles(x, y, `bubble_${color}`, {
-                    speed: { min: 50, max: 150 },
-                    scale: { start: 0.2, end: 0 },
-                    lifespan: 300,
-                    quantity: 5,
+
+                // Check if texture exists before creating particles
+                const textureKey = `bubble_${color}`;
+                if (!this.textures.exists(textureKey)) return;
+
+                const particles = this.add.particles(x, y, textureKey, {
+                    speed: { min: 30, max: 100 },
+                    scale: { start: 0.15, end: 0 },
+                    lifespan: 200,
+                    quantity: 3,
                     blendMode: 'ADD'
                 });
-                this.time.delayedCall(300, () => particles.destroy());
+                this.time.delayedCall(200, () => particles.destroy());
             }
 
             update() {
                 if (this.bullet && this.bullet.active && !this.isSnapping) {
                     const velocity = this.bullet.body!.velocity;
+                    const bulletX = this.bullet.x;
+                    const bulletY = this.bullet.y;
 
-                    if (Math.abs(velocity.x) < 10 && Math.abs(velocity.y) < 10) {
+                    // Check if bullet is stuck (very low velocity)
+                    if (Math.abs(velocity.x) < 5 && Math.abs(velocity.y) < 5) {
                         this.snapBubble();
                         return;
                     }
 
-                    // Wall bounce
-                    if (this.bullet.x <= this.BUBBLE_RADIUS) {
+                    // Wall bounce with proper boundary checking
+                    const leftBound = this.BUBBLE_RADIUS + 8; // Account for border
+                    const rightBound = this.GAME_WIDTH - this.BUBBLE_RADIUS - 8;
+
+                    if (bulletX <= leftBound && velocity.x < 0) {
+                        this.bullet.x = leftBound + 1;
                         this.bullet.setVelocityX(Math.abs(velocity.x));
-                        this.wallHitEffect(this.bullet.x, this.bullet.y);
-                    } else if (this.bullet.x >= this.GAME_WIDTH - this.BUBBLE_RADIUS) {
+                        this.wallHitEffect(bulletX, bulletY);
+                    } else if (bulletX >= rightBound && velocity.x > 0) {
+                        this.bullet.x = rightBound - 1;
                         this.bullet.setVelocityX(-Math.abs(velocity.x));
-                        this.wallHitEffect(this.bullet.x, this.bullet.y);
+                        this.wallHitEffect(bulletX, bulletY);
                     }
 
-                    if (this.bullet.y <= this.BUBBLE_RADIUS) {
+                    // Top boundary - snap immediately
+                    if (bulletY <= this.BUBBLE_RADIUS + 8) {
                         this.snapBubble();
                         return;
                     }
 
-                    // Collision check
+                    // Collision check with improved detection
                     for (let r = 0; r < this.GRID_ROWS; r++) {
                         for (let c = 0; c < this.bubbles[r].length; c++) {
                             const bubble = this.bubbles[r][c];
                             if (bubble && bubble.visible) {
-                                const dist = Phaser.Math.Distance.Between(this.bullet.x, this.bullet.y, bubble.x, bubble.y);
-                                if (dist < this.BUBBLE_RADIUS * 2 - 5) {
+                                const dist = Phaser.Math.Distance.Between(bulletX, bulletY, bubble.x, bubble.y);
+                                // Slightly larger collision radius for better detection
+                                if (dist < this.BUBBLE_RADIUS * 1.9) {
                                     this.snapBubble();
                                     return;
                                 }
@@ -339,18 +446,28 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                 if (c < 0) c = 0;
                 if (c >= maxCols) c = maxCols - 1;
 
-                // Check occupancy and find nearest empty
-                if (this.bubbles[r][c]) {
+                // Check occupancy and find nearest empty with improved search
+                if (this.bubbles[r] && this.bubbles[r][c]) {
                     let found = false;
-                    // Spiral search for nearest empty
-                    const offsets = [[0, 0], [-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [-1, 1], [1, -1], [1, 1]];
+                    // Extended spiral search for nearest empty
+                    const offsets = [
+                        [0, -1], [0, 1], // Left, Right  
+                        [-1, 0], [1, 0], // Up, Down
+                        [-1, -1], [-1, 1], // Up-Left, Up-Right
+                        [1, -1], [1, 1], // Down-Left, Down-Right
+                        [-2, 0], [2, 0], // Further up/down
+                        [0, -2], [0, 2]  // Further left/right
+                    ];
 
                     for (const [dr, dc] of offsets) {
                         const nr = r + dr;
                         const nc = c + dc;
-                        const nMaxCols = nr % 2 === 0 ? this.GRID_COLS : this.GRID_COLS - 1;
+                        if (nr < 0 || nr >= this.GRID_ROWS) continue;
 
-                        if (nr >= 0 && nr < this.GRID_ROWS && nc >= 0 && nc < nMaxCols && !this.bubbles[nr][nc]) {
+                        const nMaxCols = nr % 2 === 0 ? this.GRID_COLS : this.GRID_COLS - 1;
+                        if (nc < 0 || nc >= nMaxCols) continue;
+
+                        if (!this.bubbles[nr] || !this.bubbles[nr][nc]) {
                             r = nr;
                             c = nc;
                             found = true;
@@ -370,8 +487,29 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
                 const finalX = gridStartX + finalRowOffsetX + c * (this.BUBBLE_RADIUS * 2);
                 const finalY = this.BUBBLE_RADIUS + r * rowHeight;
 
+                // Create new bubble with snap animation
                 const newBubble = this.add.sprite(finalX, finalY, `bubble_${color}`);
                 newBubble.setData('color', color);
+                newBubble.setScale(0.5);
+
+                // Snap animation - bounce scale effect
+                this.tweens.add({
+                    targets: newBubble,
+                    scale: 1,
+                    duration: 100,
+                    ease: 'Back.easeOut',
+                    onComplete: () => {
+                        // Small bounce
+                        this.tweens.add({
+                            targets: newBubble,
+                            scale: 1.1,
+                            duration: 50,
+                            yoyo: true,
+                            ease: 'Sine.easeInOut'
+                        });
+                    }
+                });
+
                 this.bubbles[r][c] = newBubble;
 
                 this.cleanupBullet();
@@ -588,8 +726,15 @@ export default function GameCanvas({ level, onLevelComplete, isPaused }: GameCan
     }, [level]);
 
     return (
-        <div className="w-full h-full flex justify-center items-center">
-            <div ref={containerRef} className="w-full h-full max-w-[360px] aspect-[9/16]" />
+        <div className="w-full h-full flex justify-center items-center p-2">
+            <div className="relative">
+                {/* Outer glow effect */}
+                <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 via-blue-500 to-cyan-500 rounded-xl opacity-50 blur-sm animate-pulse"></div>
+                {/* Game container with border */}
+                <div className="relative bg-slate-900 rounded-lg p-1 shadow-2xl">
+                    <div ref={containerRef} className="w-full h-full max-w-[360px] aspect-[9/16] rounded-md overflow-hidden" />
+                </div>
+            </div>
         </div>
     );
 }

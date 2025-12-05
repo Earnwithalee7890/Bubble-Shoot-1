@@ -6,23 +6,76 @@ import { useFarcaster } from "@/components/FarcasterProvider";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+interface Activity {
+    type: 'level' | 'checkin' | 'streak';
+    description: string;
+    timestamp: number;
+}
+
 export default function ProfilePage() {
     const { address, isConnected } = useAccount();
     const { user } = useFarcaster();
-    const { streak, lastCheckIn } = useCheckIn();
-    const [level, setLevel] = useState(1);
-    const [points, setPoints] = useState(0);
+    const { streak, lastCheckIn, maxLevel, totalPoints } = useCheckIn();
+    const [activities, setActivities] = useState<Activity[]>([]);
 
     useEffect(() => {
-        // In a real app, fetch user stats from API
-        if (typeof window !== 'undefined') {
-            const savedLevel = localStorage.getItem('currentLevel');
-            if (savedLevel) setLevel(parseInt(savedLevel));
+        // Load recent activities from localStorage
+        if (typeof window !== 'undefined' && address) {
+            const savedActivities = localStorage.getItem(`activities_${address}`);
+            if (savedActivities) {
+                setActivities(JSON.parse(savedActivities));
+            } else {
+                // Create initial activities based on current data
+                const initialActivities: Activity[] = [];
+
+                if (lastCheckIn) {
+                    initialActivities.push({
+                        type: 'checkin',
+                        description: `Daily check-in completed`,
+                        timestamp: lastCheckIn
+                    });
+                }
+
+                if (maxLevel > 1) {
+                    initialActivities.push({
+                        type: 'level',
+                        description: `Reached Level ${maxLevel}`,
+                        timestamp: Date.now()
+                    });
+                }
+
+                if (streak > 0) {
+                    initialActivities.push({
+                        type: 'streak',
+                        description: `${streak} day streak achieved!`,
+                        timestamp: Date.now()
+                    });
+                }
+
+                setActivities(initialActivities);
+            }
         }
-    }, [address]);
+    }, [address, lastCheckIn, maxLevel, streak]);
 
     const formatAddress = (addr: string) => {
         return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+    };
+
+    const formatTimeAgo = (timestamp: number) => {
+        const seconds = Math.floor((Date.now() - timestamp) / 1000);
+        if (seconds < 60) return 'Just now';
+        if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+        if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+        return `${Math.floor(seconds / 86400)}d ago`;
+    };
+
+    const getActivityIcon = (type: string) => {
+        switch (type) {
+            case 'level': return '🎮';
+            case 'checkin': return '✅';
+            case 'streak': return '🔥';
+            default: return '📋';
+        }
     };
 
     return (
@@ -82,14 +135,14 @@ export default function ProfilePage() {
                 <div className="w-full grid grid-cols-2 gap-4 mb-6">
                     <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col items-center justify-center click-scale">
                         <div className="text-3xl mb-2">💎</div>
-                        <div className="text-3xl font-orbitron font-bold text-slate-800">{points}</div>
-                        <div className="text-xs text-slate-400 font-bold uppercase tracking-wider">Total Points</div>
+                        <div className="text-3xl font-orbitron font-bold text-slate-800">{streak}</div>
+                        <div className="text-xs text-slate-400 font-bold uppercase tracking-wider">Check-in Points</div>
                     </div>
 
                     <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col items-center justify-center click-scale">
                         <div className="text-3xl mb-2">⚡</div>
-                        <div className="text-3xl font-orbitron font-bold text-slate-800">{level}</div>
-                        <div className="text-xs text-slate-400 font-bold uppercase tracking-wider">Current Level</div>
+                        <div className="text-3xl font-orbitron font-bold text-slate-800">{maxLevel}</div>
+                        <div className="text-xs text-slate-400 font-bold uppercase tracking-wider">Max Level</div>
                     </div>
 
                     <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col items-center justify-center col-span-2 click-scale">
@@ -103,12 +156,26 @@ export default function ProfilePage() {
                     </div>
                 </div>
 
-                {/* Recent Activity (Placeholder) */}
+                {/* Recent Activity */}
                 <div className="w-full pb-10">
                     <h3 className="text-lg font-orbitron font-bold text-slate-700 mb-4 px-2">Recent Activity</h3>
-                    <div className="bg-white border border-slate-200 rounded-2xl p-6 text-center text-slate-400 text-sm font-medium">
-                        No recent game activity
-                    </div>
+                    {activities.length > 0 ? (
+                        <div className="space-y-3">
+                            {activities.slice(0, 5).map((activity, index) => (
+                                <div key={index} className="bg-white border border-slate-200 rounded-2xl p-4 flex items-center gap-3 shadow-sm">
+                                    <div className="text-2xl">{getActivityIcon(activity.type)}</div>
+                                    <div className="flex-1">
+                                        <div className="font-medium text-slate-700">{activity.description}</div>
+                                        <div className="text-xs text-slate-400">{formatTimeAgo(activity.timestamp)}</div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="bg-white border border-slate-200 rounded-2xl p-6 text-center text-slate-400 text-sm font-medium">
+                            No recent game activity
+                        </div>
+                    )}
                 </div>
 
             </div>
