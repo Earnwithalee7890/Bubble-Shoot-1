@@ -77,21 +77,47 @@ export default function Home() {
                         </Link>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-4">
                         <button
                             onClick={() => setShowWalletModal(true)}
                             disabled={!isConnected}
-                            className="btn-secondary flex items-center justify-center text-center py-4 click-scale disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="btn-secondary flex flex-col items-center justify-center text-center py-4 click-scale disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            💰 WALLET
+                            <span className="text-lg mb-1">💰</span>
+                            <span className="text-xs">WALLET</span>
                         </button>
 
                         <Link
                             href="/profile"
-                            className="btn-secondary flex items-center justify-center text-center py-4 click-scale"
+                            className="btn-secondary flex flex-col items-center justify-center text-center py-4 click-scale"
                         >
-                            👤 PROFILE
+                            <span className="text-lg mb-1">👤</span>
+                            <span className="text-xs">PROFILE</span>
                         </Link>
+
+                        <button
+                            onClick={async () => {
+                                const shareData = {
+                                    title: 'Bubble Shot - Play & Earn!',
+                                    text: '🎮 Play Bubble Shot and earn rewards! Join me on this fun crypto game on Base.',
+                                    url: typeof window !== 'undefined' ? window.location.origin : 'https://bubbleshot.app'
+                                };
+                                try {
+                                    if (navigator.share) {
+                                        await navigator.share(shareData);
+                                    } else {
+                                        await navigator.clipboard.writeText(shareData.url);
+                                        alert('Link copied to clipboard!');
+                                    }
+                                } catch (err) {
+                                    console.log('Share cancelled or failed');
+                                }
+                            }}
+                            className="btn-secondary flex flex-col items-center justify-center text-center py-4 click-scale"
+                        >
+                            <span className="text-lg mb-1">📤</span>
+                            <span className="text-xs">SHARE</span>
+                        </button>
                     </div>
                 </div>
 
@@ -110,7 +136,7 @@ export default function Home() {
                             <div className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">Lvls</div>
                         </div>
                         <div className="bg-white/80 backdrop-blur-sm border border-slate-200 rounded-2xl p-4 text-center shadow-sm">
-                            <div className="text-2xl font-orbitron font-bold text-purple-500">{streak}</div>
+                            <div className="text-2xl font-orbitron font-bold text-purple-500">{totalPoints}</div>
                             <div className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">Points</div>
                         </div>
                         <div className="bg-white/80 backdrop-blur-sm border border-slate-200 rounded-2xl p-4 text-center shadow-sm">

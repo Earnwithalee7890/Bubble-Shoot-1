@@ -1,6 +1,7 @@
 "use client";
 
 import { useAccount, useBalance } from "wagmi";
+import { useCheckIn } from "@/hooks/useCheckIn";
 import { useEffect, useState } from "react";
 
 interface WalletModalProps {
@@ -19,42 +20,41 @@ interface Transaction {
 export default function WalletModal({ onClose }: WalletModalProps) {
     const { address } = useAccount();
     const { data: ethBalance } = useBalance({ address });
-    const [degenBalance] = useState("0");
+    const { totalPoints } = useCheckIn();
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         if (address) {
-            // Simulate loading wallet transactions
             setIsLoading(true);
+            // Load actual game activities from localStorage
             setTimeout(() => {
-                // In production, fetch real transactions from blockchain/API
-                const mockTransactions: Transaction[] = [
-                    {
-                        type: 'receive',
-                        amount: '0.001',
-                        token: 'ETH',
-                        description: 'Received from friend',
-                        timestamp: Date.now() - 86400000,
-                    },
-                    {
-                        type: 'game',
-                        amount: '10',
-                        token: 'DEGEN',
-                        description: 'Level 5 completion reward',
-                        timestamp: Date.now() - 172800000,
-                    },
-                    {
-                        type: 'reward',
-                        amount: '5',
-                        token: 'DEGEN',
-                        description: 'Daily check-in bonus',
-                        timestamp: Date.now() - 259200000,
-                    },
-                ];
-                setTransactions(mockTransactions);
+                const key = `activities_${address}`;
+                const savedActivities = localStorage.getItem(key);
+
+                if (savedActivities) {
+                    try {
+                        const activities = JSON.parse(savedActivities);
+                        // Convert game activities to transaction format
+                        const realTransactions: Transaction[] = activities
+                            .slice(0, 10)
+                            .map((activity: { type: string; description: string; timestamp: number }) => ({
+                                type: activity.type === 'level' ? 'game' : activity.type === 'checkin' ? 'reward' : 'game',
+                                amount: activity.type === 'level' ? '0' : '0',
+                                token: 'POINTS',
+                                description: activity.description,
+                                timestamp: activity.timestamp,
+                            }));
+                        setTransactions(realTransactions);
+                    } catch {
+                        setTransactions([]);
+                    }
+                } else {
+                    // No activities yet - show empty state
+                    setTransactions([]);
+                }
                 setIsLoading(false);
-            }, 800);
+            }, 300);
         }
     }, [address]);
 
@@ -144,34 +144,37 @@ export default function WalletModal({ onClose }: WalletModalProps) {
                         <div className="bg-gradient-to-br from-purple-500/20 to-pink-500/10 border border-purple-500/30 rounded-2xl p-4 relative overflow-hidden">
                             <div className="absolute -right-4 -top-4 w-20 h-20 bg-purple-500/10 rounded-full blur-xl"></div>
                             <div className="relative z-10">
-                                <div className="text-xs text-purple-300 uppercase tracking-wider font-bold mb-1">DEGEN</div>
+                                <div className="text-xs text-purple-300 uppercase tracking-wider font-bold mb-1">POINTS</div>
                                 <div className="text-2xl font-orbitron font-bold text-white">
-                                    {degenBalance}
+                                    {totalPoints.toLocaleString()}
                                 </div>
-                                <div className="text-xs text-slate-500 mt-1">Rewards</div>
+                                <div className="text-xs text-slate-500 mt-1">Game Rewards</div>
                             </div>
                         </div>
                     </div>
 
                     {/* Quick Actions */}
                     <div className="grid grid-cols-3 gap-3">
-                        <button className="flex flex-col items-center gap-2 p-4 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/50 rounded-xl transition-colors group">
-                            <div className="w-10 h-10 bg-green-500/20 group-hover:bg-green-500/30 rounded-xl flex items-center justify-center transition-colors">
+                        <button className="flex flex-col items-center gap-2 p-4 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/50 rounded-xl transition-colors group opacity-60 cursor-not-allowed relative">
+                            <div className="absolute -top-1 -right-1 bg-slate-600 text-[8px] text-slate-300 px-1.5 py-0.5 rounded-full font-bold">SOON</div>
+                            <div className="w-10 h-10 bg-green-500/20 rounded-xl flex items-center justify-center">
                                 <span className="text-lg">↙️</span>
                             </div>
-                            <span className="text-xs text-slate-400 group-hover:text-white transition-colors font-medium">Receive</span>
+                            <span className="text-xs text-slate-500 font-medium">Receive</span>
                         </button>
-                        <button className="flex flex-col items-center gap-2 p-4 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/50 rounded-xl transition-colors group">
-                            <div className="w-10 h-10 bg-blue-500/20 group-hover:bg-blue-500/30 rounded-xl flex items-center justify-center transition-colors">
+                        <button className="flex flex-col items-center gap-2 p-4 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/50 rounded-xl transition-colors group opacity-60 cursor-not-allowed relative">
+                            <div className="absolute -top-1 -right-1 bg-slate-600 text-[8px] text-slate-300 px-1.5 py-0.5 rounded-full font-bold">SOON</div>
+                            <div className="w-10 h-10 bg-blue-500/20 rounded-xl flex items-center justify-center">
                                 <span className="text-lg">↗️</span>
                             </div>
-                            <span className="text-xs text-slate-400 group-hover:text-white transition-colors font-medium">Send</span>
+                            <span className="text-xs text-slate-500 font-medium">Send</span>
                         </button>
-                        <button className="flex flex-col items-center gap-2 p-4 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/50 rounded-xl transition-colors group">
-                            <div className="w-10 h-10 bg-purple-500/20 group-hover:bg-purple-500/30 rounded-xl flex items-center justify-center transition-colors">
+                        <button className="flex flex-col items-center gap-2 p-4 bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700/50 rounded-xl transition-colors group opacity-60 cursor-not-allowed relative">
+                            <div className="absolute -top-1 -right-1 bg-slate-600 text-[8px] text-slate-300 px-1.5 py-0.5 rounded-full font-bold">SOON</div>
+                            <div className="w-10 h-10 bg-purple-500/20 rounded-xl flex items-center justify-center">
                                 <span className="text-lg">🔄</span>
                             </div>
-                            <span className="text-xs text-slate-400 group-hover:text-white transition-colors font-medium">Swap</span>
+                            <span className="text-xs text-slate-500 font-medium">Swap</span>
                         </button>
                     </div>
 
@@ -187,9 +190,9 @@ export default function WalletModal({ onClose }: WalletModalProps) {
                                 transactions.map((tx, index) => (
                                     <div key={index} className="flex items-center gap-3 p-3 bg-slate-800/30 hover:bg-slate-800/50 rounded-xl transition-colors cursor-pointer">
                                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${tx.type === 'receive' ? 'bg-green-500/20' :
-                                                tx.type === 'send' ? 'bg-red-500/20' :
-                                                    tx.type === 'reward' ? 'bg-yellow-500/20' :
-                                                        'bg-purple-500/20'
+                                            tx.type === 'send' ? 'bg-red-500/20' :
+                                                tx.type === 'reward' ? 'bg-yellow-500/20' :
+                                                    'bg-purple-500/20'
                                             }`}>
                                             <span className="text-lg">{getTransactionIcon(tx.type)}</span>
                                         </div>

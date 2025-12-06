@@ -31,17 +31,9 @@ export default function LeaderboardPage() {
             if (!response.ok) throw new Error('Failed to fetch');
             const data = await response.json();
 
-            // If API returns empty, show demo data for better UX
+            // Show real data only - no fake demo data
             if (!data || data.length === 0) {
-                // Generate demo leaderboard for visual appeal
-                const demoData: LeaderboardEntry[] = [
-                    { rank: 1, address: '0x1234567890abcdef1234567890abcdef12345678', score: 15420, level: 45, streak: 12 },
-                    { rank: 2, address: '0xabcdef1234567890abcdef1234567890abcdef12', score: 12350, level: 38, streak: 8 },
-                    { rank: 3, address: '0x9876543210fedcba9876543210fedcba98765432', score: 9870, level: 31, streak: 5 },
-                    { rank: 4, address: '0xfedcba9876543210fedcba9876543210fedcba98', score: 7650, level: 25, streak: 3 },
-                    { rank: 5, address: '0x567890abcdef1234567890abcdef123456789012', score: 5430, level: 20, streak: 7 },
-                ];
-                setLeaderboard(demoData);
+                setLeaderboard([]);
             } else {
                 setLeaderboard(data);
 
@@ -160,9 +152,16 @@ export default function LeaderboardPage() {
                         </div>
                     ) : leaderboard.length === 0 ? (
                         <div className="bg-white/80 border border-slate-200 rounded-3xl p-12 text-center shadow-sm">
-                            <div className="text-6xl mb-4">🎮</div>
-                            <p className="text-xl text-slate-600 font-bold">No players yet</p>
-                            <p className="text-slate-400 text-sm mt-2">Be the first to claim the throne!</p>
+                            <div className="text-6xl mb-4">🏆</div>
+                            <p className="text-xl text-slate-600 font-bold">Leaderboard is Empty</p>
+                            <p className="text-slate-400 text-sm mt-2 mb-6">Be the first player to set a record!</p>
+                            <p className="text-slate-500 text-xs">Play the game and your score will appear here automatically.</p>
+                            <button
+                                onClick={() => router.push('/game')}
+                                className="mt-4 px-6 py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-bold rounded-xl shadow-lg shadow-orange-500/30 hover:from-yellow-600 hover:to-orange-600 transition-all"
+                            >
+                                🎮 Start Playing
+                            </button>
                         </div>
                     ) : (
                         <>
@@ -201,8 +200,8 @@ export default function LeaderboardPage() {
                                 <div
                                     key={entry.rank}
                                     className={`flex items-center justify-between p-4 rounded-2xl transition-all duration-300 hover:scale-[1.02] shadow-sm border-2 ${getRankStyle(entry.rank)} ${address && entry.address.toLowerCase() === address.toLowerCase()
-                                            ? 'ring-2 ring-blue-500 ring-offset-2'
-                                            : ''
+                                        ? 'ring-2 ring-blue-500 ring-offset-2'
+                                        : ''
                                         }`}
                                 >
                                     {/* Rank */}
