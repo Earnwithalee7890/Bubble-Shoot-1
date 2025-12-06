@@ -96,22 +96,13 @@ export default function Home() {
                         </Link>
 
                         <button
-                            onClick={async () => {
-                                const shareData = {
-                                    title: 'Bubble Shot - Play & Earn!',
-                                    text: '🎮 Play Bubble Shot and earn rewards! Join me on this fun crypto game on Base.',
-                                    url: typeof window !== 'undefined' ? window.location.origin : 'https://bubbleshot.app'
-                                };
-                                try {
-                                    if (navigator.share) {
-                                        await navigator.share(shareData);
-                                    } else {
-                                        await navigator.clipboard.writeText(shareData.url);
-                                        alert('Link copied to clipboard!');
-                                    }
-                                } catch (err) {
-                                    console.log('Share cancelled or failed');
-                                }
+                            onClick={() => {
+                                const text = '🎮 Play Bubble Shot and earn rewards! Join me on this fun crypto game on Base.';
+                                const url = typeof window !== 'undefined' ? window.location.origin : 'https://bubbleshot.app';
+                                const encodedText = encodeURIComponent(text);
+                                const encodedUrl = encodeURIComponent(url);
+                                const warpcastUrl = `https://warpcast.com/~/compose?text=${encodedText}&embeds[]=${encodedUrl}`;
+                                window.open(warpcastUrl, '_blank');
                             }}
                             className="btn-secondary flex flex-col items-center justify-center text-center py-4 click-scale"
                         >
